@@ -22,7 +22,7 @@ public sealed class FloatingToolbarWindow : Window
     public FloatingToolbarWindow(DeviceViewModel device, AdbService adb, string scrcpyTitle)
     {
         _device = device; _adb = adb; _scrcpyTitle = scrcpyTitle;
-        Title = "投屏快捷操作"; Width = 68; Height = 330;
+        Title = "投屏快捷操作"; Width = 68; Height = 450;
         WindowStyle = WindowStyle.None; AllowsTransparency = true;
         Background = System.Windows.Media.Brushes.Transparent; Topmost = true; ShowInTaskbar = false;
         var panel = new StackPanel { Margin = new Thickness(6) };
@@ -32,6 +32,8 @@ public sealed class FloatingToolbarWindow : Window
         AddButton(panel, "＋", "音量加", () => RunKeyAsync("24"));
         AddButton(panel, "－", "音量减", () => RunKeyAsync("25"));
         AddButton(panel, "◎", "截图", CaptureAsync);
+        AddButton(panel, "⛶", "全屏", () => { ToggleFullscreen(); return Task.CompletedTask; });
+        AddButton(panel, "◐", "关闭手机画面但继续投屏", () => RunKeyAsync("26"));
         AddButton(panel, "□", "置顶", () => { ToggleTopmost(); return Task.CompletedTask; });
         Content = new Border
         {
@@ -77,6 +79,17 @@ public sealed class FloatingToolbarWindow : Window
         if (handle != IntPtr.Zero) Native.SetWindowPos(handle, HwndTopmost, 0, 0, 0, 0, SwpNoActivate | SwpShowWindow);
     }
 
+    private void ToggleFullscreen()
+    {
+        var handle = Native.FindWindow(null, _scrcpyTitle);
+        if (handle == IntPtr.Zero) return;
+        Native.SetForegroundWindow(handle);
+        Native.KeybdEvent(0xA4, 0, 0, UIntPtr.Zero);
+        Native.KeybdEvent(0x46, 0, 0, UIntPtr.Zero);
+        Native.KeybdEvent(0x46, 0, 2, UIntPtr.Zero);
+        Native.KeybdEvent(0xA4, 0, 2, UIntPtr.Zero);
+    }
+
     private void FollowScrcpyWindow()
     {
         var handle = Native.FindWindow(null, _scrcpyTitle);
@@ -95,6 +108,8 @@ public sealed class FloatingToolbarWindow : Window
         [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern IntPtr FindWindow(string? className, string? windowName);
         [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out Rect rect);
         [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr insertAfter, int x, int y, int cx, int cy, uint flags);
+        [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+        [DllImport("user32.dll")] public static extern void KeybdEvent(byte virtualKey, byte scanCode, uint flags, UIntPtr extraInfo);
     }
 
     [StructLayout(LayoutKind.Sequential)]

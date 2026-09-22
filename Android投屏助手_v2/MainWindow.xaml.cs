@@ -110,6 +110,8 @@ public partial class MainWindow : Window
         var start = new Button { Content = "我已扫码，开始查找", Padding = new Thickness(16, 8, 16, 8), HorizontalAlignment = HorizontalAlignment.Center };
         var status = new TextBlock { Text = "手机：设置 → 开发者选项 → 无线调试 → 使用二维码配对", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(25, 0, 25, 12), Foreground = Brushes.DimGray };
         var panel = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
+        using var pairingCancellation = new CancellationTokenSource();
+        window.Closed += (_, _) => pairingCancellation.Cancel();
         panel.Children.Add(new TextBlock { Text = "请使用手机无线调试页面扫描", FontSize = 16, FontWeight = FontWeights.SemiBold, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 18, 0, 0) });
         panel.Children.Add(image);
         panel.Children.Add(status);
@@ -121,29 +123,31 @@ public partial class MainWindow : Window
             status.Text = "正在等待手机广播配对服务…";
             try
             {
-                var endpoint = await WaitForMdnsAsync(serviceName, true, TimeSpan.FromMinutes(2));
+                var endpoint = await WaitForMdnsAsync(serviceName, true, TimeSpan.FromMinutes(2), pairingCancellation.Token);
                 if (endpoint is null) throw new InvalidOperationException("等待扫码超时，请保持手机和电脑在同一网络。");
                 if (!await _viewModel.Adb.PairAsync(endpoint.Address, password)) throw new InvalidOperationException("扫码配对失败。");
                 status.Text = "配对成功，正在查找连接服务…";
-                var connect = await WaitForMdnsAsync(string.Empty, false, TimeSpan.FromSeconds(30));
+                var connect = await WaitForMdnsAsync(string.Empty, false, TimeSpan.FromSeconds(30), pairingCancellation.Token);
                 if (connect is not null) await _viewModel.ConnectIpAsync(connect.Address);
                 status.Text = "配对成功，可以关闭此窗口。";
             }
+            catch (OperationCanceledException) { status.Text = "扫码配对已取消。"; }
             catch (Exception ex) { status.Text = ex.Message; }
             finally { start.IsEnabled = true; }
         };
         window.ShowDialog();
     }
 
-    private async Task<MdnsEndpoint?> WaitForMdnsAsync(string serviceName, bool pairing, TimeSpan timeout)
+    private async Task<MdnsEndpoint?> WaitForMdnsAsync(string serviceName, bool pairing, TimeSpan timeout, CancellationToken cancellationToken)
     {
         var end = DateTime.UtcNow + timeout;
         while (DateTime.UtcNow < end)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var services = await _viewModel.DiscoverMdnsAsync();
             var endpoint = services.FirstOrDefault(x => x.IsPairing == pairing && (string.IsNullOrWhiteSpace(serviceName) || x.ServiceName.Contains(serviceName, StringComparison.OrdinalIgnoreCase)));
             if (endpoint is not null) return endpoint;
-            await Task.Delay(1000);
+            await Task.Delay(1000, cancellationToken);
         }
         return null;
     }
