@@ -9,6 +9,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Interop;
 using System.Windows.Threading;
 
 namespace Android投屏助手;
@@ -25,7 +26,7 @@ public sealed class FloatingToolbarWindow : Window
     private readonly Button _recordButton;
     private readonly TextBlock _recordHint;
     private DockSide _dockSide = DockSide.Right;
-    private double _dockTopOffset;
+    private int _dockTopOffsetPx;
     private bool _hasDockPosition;
     private bool _isDragging;
     private bool _closing;
@@ -46,7 +47,7 @@ public sealed class FloatingToolbarWindow : Window
 
         Title = "投屏快捷操作";
         Width = 76;
-        Height = 378;
+        Height = 285;
         WindowStyle = WindowStyle.None;
         AllowsTransparency = false;
         Background = new SolidColorBrush(Color.FromRgb(235, 243, 246));
@@ -82,8 +83,6 @@ public sealed class FloatingToolbarWindow : Window
         AddButton(panel, "‹", "返回", () => RunKeyAsync("4"));
         AddButton(panel, "▣", "最近任务", () => RunKeyAsync("187"));
         AddButton(panel, "◎", "截图", CaptureAsync);
-        AddButton(panel, "⛶", "全屏", () => { ToggleFullscreen(); return Task.CompletedTask; });
-        AddButton(panel, "◐", "关闭手机画面但继续投屏", () => RunKeyAsync("26"));
         _recordButton = AddButton(panel, "●", "开始录屏", ToggleRecordingAsync);
         _recordHint = new TextBlock
         {
@@ -210,63 +209,51 @@ public sealed class FloatingToolbarWindow : Window
         _recordHint.Text = recording ? "正在录制，点击 ■ 结束并保存" : "拖动上方手柄调整位置";
     }
 
-    private void ToggleFullscreen()
-    {
-        var handle = GetScrcpyHandle();
-        if (handle == IntPtr.Zero) return;
-        Native.SetForegroundWindow(handle);
-        Native.KeybdEvent(0xA4, 0, 0, UIntPtr.Zero);
-        Native.KeybdEvent(0x46, 0, 0, UIntPtr.Zero);
-        Native.KeybdEvent(0x46, 0, 2, UIntPtr.Zero);
-        Native.KeybdEvent(0xA4, 0, 2, UIntPtr.Zero);
-    }
-
     private void FollowScrcpyWindow()
     {
         if (_isDragging) return;
         var handle = GetScrcpyHandle();
         if (handle == IntPtr.Zero || !Native.GetWindowRect(handle, out var rect)) return;
-        var dipRect = ToDipRect(rect);
         if (!_hasDockPosition)
         {
             _dockSide = DockSide.Right;
-            _dockTopOffset = 0;
+            _dockTopOffsetPx = 0;
             _hasDockPosition = true;
         }
-        ApplyDockPosition(dipRect);
+        ApplyDockPosition(rect);
     }
 
     private void SnapToScrcpyWindow()
     {
         var handle = GetScrcpyHandle();
         if (handle == IntPtr.Zero || !Native.GetWindowRect(handle, out var rect)) return;
-        var dipRect = ToDipRect(rect);
+        var toolbarHandle = GetToolbarHandle();
+        if (toolbarHandle == IntPtr.Zero || !Native.GetWindowRect(toolbarHandle, out var toolbarRect)) return;
 
-        var toolbarCenter = Left + Width / 2;
-        var scrcpyCenter = (dipRect.Left + dipRect.Right) / 2.0;
+        var toolbarCenter = (toolbarRect.Left + toolbarRect.Right) / 2.0;
+        var scrcpyCenter = (rect.Left + rect.Right) / 2.0;
         _dockSide = toolbarCenter < scrcpyCenter ? DockSide.Left : DockSide.Right;
-        var maxOffset = Math.Max(0, dipRect.Height - Height);
-        _dockTopOffset = Math.Clamp(Top - dipRect.Top, 0, maxOffset);
+        var maxOffset = Math.Max(0, rect.Height - toolbarRect.Height);
+        _dockTopOffsetPx = Math.Clamp(toolbarRect.Top - rect.Top, 0, maxOffset);
         _hasDockPosition = true;
-        ApplyDockPosition(dipRect);
+        ApplyDockPosition(rect);
     }
 
-    private void ApplyDockPosition(System.Windows.Rect rect)
+    private void ApplyDockPosition(Native.Rect rect)
     {
-        var maxOffset = Math.Max(0, rect.Height - Height);
-        _dockTopOffset = Math.Clamp(_dockTopOffset, 0, maxOffset);
-        Left = _dockSide == DockSide.Right ? rect.Right + DockGap : rect.Left - Width - DockGap;
-        Top = rect.Top + _dockTopOffset;
+        var toolbarHandle = GetToolbarHandle();
+        if (toolbarHandle == IntPtr.Zero || !Native.GetWindowRect(toolbarHandle, out var toolbarRect)) return;
+
+        var maxOffset = Math.Max(0, rect.Height - toolbarRect.Height);
+        _dockTopOffsetPx = Math.Clamp(_dockTopOffsetPx, 0, maxOffset);
+        var left = _dockSide == DockSide.Right
+            ? rect.Right + DockGap
+            : rect.Left - toolbarRect.Width - DockGap;
+        var top = rect.Top + _dockTopOffsetPx;
+        Native.SetWindowPos(toolbarHandle, Native.HwndTopmost, left, top, 0, 0, Native.SwpNoSize | Native.SwpNoActivate | Native.SwpShowWindow);
     }
 
-    private System.Windows.Rect ToDipRect(Native.Rect rect)
-    {
-        var target = PresentationSource.FromVisual(this)?.CompositionTarget;
-        if (target is null) return new System.Windows.Rect(rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top);
-        var topLeft = target.TransformFromDevice.Transform(new Point(rect.Left, rect.Top));
-        var bottomRight = target.TransformFromDevice.Transform(new Point(rect.Right, rect.Bottom));
-        return new System.Windows.Rect(topLeft, bottomRight);
-    }
+    private IntPtr GetToolbarHandle() => new WindowInteropHelper(this).Handle;
 
     private IntPtr GetScrcpyHandle()
     {
@@ -309,12 +296,21 @@ public sealed class FloatingToolbarWindow : Window
 
     private static class Native
     {
+        public static readonly IntPtr HwndTopmost = new(-1);
+        public const uint SwpNoSize = 0x0001;
+        public const uint SwpNoActivate = 0x0010;
+        public const uint SwpShowWindow = 0x0040;
+
         [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern IntPtr FindWindow(string? className, string? windowName);
         [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out Rect rect);
-        [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
-        [DllImport("user32.dll")] public static extern void KeybdEvent(byte virtualKey, byte scanCode, uint flags, UIntPtr extraInfo);
+        [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr insertAfter, int x, int y, int cx, int cy, uint flags);
 
         [StructLayout(LayoutKind.Sequential)]
-        public struct Rect { public int Left, Top, Right, Bottom; }
+        public struct Rect
+        {
+            public int Left, Top, Right, Bottom;
+            public int Width => Right - Left;
+            public int Height => Bottom - Top;
+        }
     }
 }

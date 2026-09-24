@@ -60,7 +60,8 @@ public sealed class ScreenRecorderService
         {
             "-s", _serial, "shell", "screenrecord",
             "--bit-rate", "12000000",
-            "--time-limit", "3600",
+            // Android screenrecord 的时间上限是 180 秒，超过会直接拒绝启动。
+            "--time-limit", "180",
             _remoteFile
         }) info.ArgumentList.Add(argument);
 
