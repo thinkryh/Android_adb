@@ -2,6 +2,11 @@
 setlocal
 chcp 65001 >nul
 set "ROOT=%~dp0"
+set "V2_LATEST=%ROOT%Android投屏助手_v2\bin\Release\net10.0-windows\latest\Android投屏助手.exe"
+if exist "%V2_LATEST%" (
+    start "" "%V2_LATEST%"
+    exit /b 0
+)
 set "V2_CURRENT=%ROOT%Android投屏助手_v2\bin\Release\net10.0-windows\current\Android投屏助手.exe"
 if exist "%V2_CURRENT%" (
     start "" "%V2_CURRENT%"
