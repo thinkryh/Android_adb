@@ -12,7 +12,6 @@
         <SolidColorBrush x:Key="AccentLightBrush" Color="#CDEAF0" />
         <SolidColorBrush x:Key="DangerBrush" Color="#B84E55" />
         <SolidColorBrush x:Key="BorderBrush" Color="#FFFFFF" />
-        <DropShadowEffect x:Key="CardShadow" BlurRadius="28" ShadowDepth="5" Direction="270" Opacity="0.16" Color="#557985" />
         <Style TargetType="TextBlock">
             <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
             <Setter Property="FontFamily" Value="Microsoft YaHei UI" />

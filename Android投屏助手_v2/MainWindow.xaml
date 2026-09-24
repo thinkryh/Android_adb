@@ -11,16 +11,20 @@
         MinHeight="560"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
-        AllowsTransparency="True"
-        Background="Transparent"
+        AllowsTransparency="False"
+        Background="{StaticResource WindowBrush}"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType"
+        RenderOptions.BitmapScalingMode="HighQuality"
         Loaded="Window_Loaded"
         Closing="Window_Closing">
     <Border Margin="14"
             Background="{StaticResource WindowBrush}"
             BorderBrush="{StaticResource BorderBrush}"
             BorderThickness="1"
-            CornerRadius="28"
-            Effect="{StaticResource CardShadow}">
+            CornerRadius="28">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="76" />
@@ -80,7 +84,7 @@
                                 <Border Width="305" MinHeight="190" Margin="0,0,16,16" Padding="18"
                                         Background="{StaticResource PanelStrongBrush}"
                                         BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                                        CornerRadius="22" Effect="{StaticResource CardShadow}">
+                                        CornerRadius="22">
                                     <Grid>
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto" />
