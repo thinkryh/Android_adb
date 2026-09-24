@@ -159,10 +159,10 @@ public partial class MainWindow : Window
         try
         {
             var process = await _viewModel.StartMirrorAsync(item);
-            var toolbar = new FloatingToolbarWindow(item, _viewModel.Adb, process, $"Android投屏助手 - {item.DisplayName}");
+            var toolbar = new FloatingToolbarWindow(item, _viewModel.Adb, process, this, $"Android投屏助手 - {item.DisplayName}");
             process.Exited += (_, _) => Dispatcher.Invoke(() =>
             {
-                if (toolbar.IsVisible) toolbar.Close();
+                toolbar.Close();
                 item.Status = DeviceStatus.Online;
             });
             toolbar.Show();

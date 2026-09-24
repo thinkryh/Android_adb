@@ -26,20 +26,19 @@ public sealed class ScreenRecorderService
     }
 
     public bool IsRecording => _process is { HasExited: false };
+    public bool HasPendingRecording => _process is not null;
     public string? LocalFile => _localFile;
 
     public async Task StartAsync(string displayName, CancellationToken cancellationToken = default)
     {
         if (IsRecording) return;
-        if (_process is not null)
-        {
-            _process.Dispose();
-            _process = null;
-        }
+        if (HasPendingRecording) throw new InvalidOperationException("上一段录屏尚未导出，请先结束录屏。");
 
-        var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "Android投屏助手");
+        var videos = Environment.GetFolderPath(Environment.SpecialFolder.MyVideos);
+        if (string.IsNullOrWhiteSpace(videos)) videos = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Videos");
+        var folder = Path.Combine(videos, "Android投屏助手");
         Directory.CreateDirectory(folder);
-        var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+        var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss-fff");
         var safeName = Sanitize(displayName);
         _localFile = Path.Combine(folder, $"{safeName}-{stamp}.mp4");
         // 远端路径使用 ASCII 文件名，避免部分 Android shell 的中文编码问题。
@@ -86,47 +85,42 @@ public sealed class ScreenRecorderService
         var localFile = _localFile;
         if (process is null || string.IsNullOrWhiteSpace(remoteFile) || string.IsNullOrWhiteSpace(localFile)) return null;
 
-        try
+        if (!process.HasExited)
         {
-            if (!process.HasExited)
+            var pid = await FindScreenRecordPidAsync(cancellationToken);
+            if (pid is not null)
             {
-                var pid = await FindScreenRecordPidAsync(cancellationToken);
-                if (pid is not null)
-                {
-                    try { await _adb.RunAsync(["-s", _serial, "shell", "kill", "-2", pid], cancellationToken); }
-                    catch { }
-                }
-                else
-                {
-                    try { await _adb.RunAsync(["-s", _serial, "shell", "pkill", "-2", "screenrecord"], cancellationToken); }
-                    catch { }
-                }
-
-                try
-                {
-                    await process.WaitForExitAsync(cancellationToken).WaitAsync(TimeSpan.FromSeconds(8), cancellationToken);
-                }
-                catch (TimeoutException)
-                {
-                    try { process.Kill(entireProcessTree: true); } catch { }
-                }
+                await _adb.RunAsync(["-s", _serial, "shell", "kill", "-2", pid], cancellationToken);
+            }
+            else
+            {
+                await _adb.RunAsync(["-s", _serial, "shell", "pkill", "-2", "screenrecord"], cancellationToken);
             }
 
-            var pull = await _adb.RunAsync(["-s", _serial, "pull", remoteFile, localFile], cancellationToken);
-            if (pull.ExitCode != 0 || !File.Exists(localFile) || new FileInfo(localFile).Length == 0)
+            try { await process.WaitForExitAsync(cancellationToken).WaitAsync(TimeSpan.FromSeconds(20), cancellationToken); }
+            catch (TimeoutException)
             {
-                throw new InvalidOperationException(string.IsNullOrWhiteSpace(pull.Error) ? "录屏文件导出失败。" : pull.Error.Trim());
+                throw new InvalidOperationException("手机录屏尚未结束，文件仍在封装中。请稍后再次点击结束录屏。");
             }
+        }
 
-            try { await _adb.RunAsync(["-s", _serial, "shell", "rm", remoteFile], cancellationToken); } catch { }
-            return localFile;
-        }
-        finally
+        await DrainAsync(_stdoutTask);
+        await DrainAsync(_stderrTask);
+
+        var pull = await _adb.RunAsync(["-s", _serial, "pull", remoteFile, localFile], cancellationToken);
+        if (pull.ExitCode != 0 || !File.Exists(localFile) || new FileInfo(localFile).Length == 0)
         {
-            await DrainAsync(_stdoutTask);
-            await DrainAsync(_stderrTask);
-            ResetProcess();
+            throw new InvalidOperationException(string.IsNullOrWhiteSpace(pull.Error) ? $"录屏文件导出失败。手机文件仍保留在 {remoteFile}" : pull.Error.Trim());
         }
+
+        if (!HasMovieIndex(localFile))
+        {
+            throw new InvalidOperationException($"录屏文件尚未完成封装，不能作为成功文件使用：\n{localFile}\n手机原文件仍保留，请稍后重试。");
+        }
+
+        try { await _adb.RunAsync(["-s", _serial, "shell", "rm", remoteFile], cancellationToken); } catch { }
+        ResetProcess();
+        return localFile;
     }
 
     private async Task<string?> FindScreenRecordPidAsync(CancellationToken cancellationToken)
@@ -144,6 +138,35 @@ public sealed class ScreenRecorderService
     {
         if (task is null) return;
         try { await task; } catch { }
+    }
+
+    private static bool HasMovieIndex(string file)
+    {
+        using var stream = File.OpenRead(file);
+        if (stream.Length < 32) return false;
+        var hasFileType = false;
+        var hasMovieIndex = false;
+        Span<byte> header = stackalloc byte[16];
+        while (stream.Position + 8 <= stream.Length)
+        {
+            if (stream.Read(header[..8]) != 8) break;
+            var size = System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(header[..4]);
+            var type = Encoding.ASCII.GetString(header.Slice(4, 4));
+            long boxSize = size;
+            var headerSize = 8;
+            if (size == 1)
+            {
+                if (stream.Read(header[..8]) != 8) break;
+                boxSize = checked((long)System.Buffers.Binary.BinaryPrimitives.ReadUInt64BigEndian(header[..8]));
+                headerSize = 16;
+            }
+            else if (size == 0) boxSize = stream.Length - (stream.Position - 8);
+            if (boxSize < headerSize || stream.Position + boxSize - headerSize > stream.Length) return false;
+            if (type == "ftyp") hasFileType = true;
+            if (type == "moov") hasMovieIndex = true;
+            stream.Seek(boxSize - headerSize, SeekOrigin.Current);
+        }
+        return hasFileType && hasMovieIndex;
     }
 
     private void ResetProcess()

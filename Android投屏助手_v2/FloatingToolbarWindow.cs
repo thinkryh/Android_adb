@@ -16,19 +16,21 @@ namespace Android投屏助手;
 
 public sealed class FloatingToolbarWindow : Window
 {
-    private const int DockGap = 8;
+    private const int SnapDistance = 32;
     private readonly DeviceViewModel _device;
     private readonly AdbService _adb;
     private readonly Process _scrcpyProcess;
+    private readonly Window _mainWindow;
     private readonly string _scrcpyTitle;
     private readonly ScreenRecorderService _recorder;
     private readonly DispatcherTimer _timer;
     private readonly Button _recordButton;
-    private readonly TextBlock _recordHint;
     private DockSide _dockSide = DockSide.Right;
     private int _dockTopOffsetPx;
-    private bool _hasDockPosition;
+    private bool _isDocked = true;
     private bool _isDragging;
+    private bool _hiddenForMinimize;
+    private bool _autoFinalizeAttempted;
     private bool _closing;
 
     private enum DockSide
@@ -37,17 +39,18 @@ public sealed class FloatingToolbarWindow : Window
         Right
     }
 
-    public FloatingToolbarWindow(DeviceViewModel device, AdbService adb, Process scrcpyProcess, string scrcpyTitle)
+    public FloatingToolbarWindow(DeviceViewModel device, AdbService adb, Process scrcpyProcess, Window mainWindow, string scrcpyTitle)
     {
         _device = device;
         _adb = adb;
         _scrcpyProcess = scrcpyProcess;
+        _mainWindow = mainWindow;
         _scrcpyTitle = scrcpyTitle;
         _recorder = new ScreenRecorderService(adb, device.Device);
 
         Title = "投屏快捷操作";
         Width = 76;
-        Height = 285;
+        Height = 255;
         WindowStyle = WindowStyle.None;
         AllowsTransparency = false;
         Background = new SolidColorBrush(Color.FromRgb(235, 243, 246));
@@ -66,7 +69,7 @@ public sealed class FloatingToolbarWindow : Window
             CornerRadius = new CornerRadius(8),
             Background = new SolidColorBrush(Color.FromRgb(213, 229, 234)),
             Cursor = Cursors.SizeAll,
-            ToolTip = "拖动此处，可吸附到投屏窗口左侧或右侧"
+            ToolTip = "移动工具栏"
         };
         handle.Child = new TextBlock
         {
@@ -84,16 +87,6 @@ public sealed class FloatingToolbarWindow : Window
         AddButton(panel, "▣", "最近任务", () => RunKeyAsync("187"));
         AddButton(panel, "◎", "截图", CaptureAsync);
         _recordButton = AddButton(panel, "●", "开始录屏", ToggleRecordingAsync);
-        _recordHint = new TextBlock
-        {
-            Text = "拖动上方手柄调整位置",
-            FontSize = 9,
-            TextAlignment = TextAlignment.Center,
-            Foreground = new SolidColorBrush(Color.FromRgb(96, 115, 125)),
-            Margin = new Thickness(0, 2, 0, 0),
-            TextWrapping = TextWrapping.Wrap
-        };
-        panel.Children.Add(_recordHint);
 
         Content = new Border
         {
@@ -105,7 +98,15 @@ public sealed class FloatingToolbarWindow : Window
         };
 
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
-        _timer.Tick += (_, _) => FollowScrcpyWindow();
+        _timer.Tick += (_, _) =>
+        {
+            FollowScrcpyWindow();
+            if (_recorder.HasPendingRecording && !_recorder.IsRecording && !_autoFinalizeAttempted && _recordButton.IsEnabled)
+            {
+                _autoFinalizeAttempted = true;
+                _ = ToggleRecordingAsync();
+            }
+        };
         Loaded += (_, _) =>
         {
             _timer.Start();
@@ -177,23 +178,29 @@ public sealed class FloatingToolbarWindow : Window
         _recordButton.IsEnabled = false;
         try
         {
-            if (_recorder.IsRecording)
+            if (_recorder.HasPendingRecording)
             {
                 var file = await _recorder.StopAsync();
                 SetRecordingState(false);
                 if (!string.IsNullOrWhiteSpace(file))
                 {
-                    MessageBox.Show($"录屏已保存：\n{file}", "录屏完成", MessageBoxButton.OK, MessageBoxImage.Information);
+                    var size = new FileInfo(file).Length;
+                    var choice = MessageBox.Show($"录屏已保存（{size / 1024.0 / 1024.0:F1} MB）：\n{file}\n\n现在打开保存文件夹吗？", "录屏完成", MessageBoxButton.YesNo, MessageBoxImage.Information);
+                    if (choice == MessageBoxResult.Yes)
+                    {
+                        Process.Start(new ProcessStartInfo { FileName = Path.GetDirectoryName(file)!, UseShellExecute = true });
+                    }
                 }
                 return;
             }
 
             await _recorder.StartAsync(_device.DisplayName);
+            _autoFinalizeAttempted = false;
             SetRecordingState(true);
         }
         catch (Exception ex)
         {
-            SetRecordingState(false);
+            SetRecordingState(_recorder.HasPendingRecording);
             MessageBox.Show(ex.Message, "录屏失败", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         finally
@@ -206,36 +213,46 @@ public sealed class FloatingToolbarWindow : Window
     {
         _recordButton.Content = recording ? "■" : "●";
         _recordButton.ToolTip = recording ? "结束录屏并保存" : "开始录屏";
-        _recordHint.Text = recording ? "正在录制，点击 ■ 结束并保存" : "拖动上方手柄调整位置";
     }
 
     private void FollowScrcpyWindow()
     {
         if (_isDragging) return;
         var handle = GetScrcpyHandle();
-        if (handle == IntPtr.Zero || !Native.GetWindowRect(handle, out var rect)) return;
-        if (!_hasDockPosition)
+        if (handle == IntPtr.Zero) return;
+        if (_mainWindow.WindowState == WindowState.Minimized || Native.IsIconic(handle))
         {
-            _dockSide = DockSide.Right;
-            _dockTopOffsetPx = 0;
-            _hasDockPosition = true;
+            if (IsVisible)
+            {
+                _hiddenForMinimize = true;
+                Hide();
+            }
+            return;
         }
-        ApplyDockPosition(rect);
+        if (_hiddenForMinimize)
+        {
+            _hiddenForMinimize = false;
+            Show();
+        }
+        if (_isDocked && Native.GetVisibleWindowRect(handle, out var rect)) ApplyDockPosition(rect);
     }
 
     private void SnapToScrcpyWindow()
     {
         var handle = GetScrcpyHandle();
-        if (handle == IntPtr.Zero || !Native.GetWindowRect(handle, out var rect)) return;
+        if (handle == IntPtr.Zero || !Native.GetVisibleWindowRect(handle, out var rect)) return;
         var toolbarHandle = GetToolbarHandle();
         if (toolbarHandle == IntPtr.Zero || !Native.GetWindowRect(toolbarHandle, out var toolbarRect)) return;
 
-        var toolbarCenter = (toolbarRect.Left + toolbarRect.Right) / 2.0;
-        var scrcpyCenter = (rect.Left + rect.Right) / 2.0;
-        _dockSide = toolbarCenter < scrcpyCenter ? DockSide.Left : DockSide.Right;
+        var distanceLeft = Math.Abs(toolbarRect.Right - rect.Left);
+        var distanceRight = Math.Abs(toolbarRect.Left - rect.Right);
+        var overlapsVertically = toolbarRect.Bottom >= rect.Top && toolbarRect.Top <= rect.Bottom;
+        _isDocked = overlapsVertically && Math.Min(distanceLeft, distanceRight) <= SnapDistance;
+        if (!_isDocked) return;
+
+        _dockSide = distanceLeft < distanceRight ? DockSide.Left : DockSide.Right;
         var maxOffset = Math.Max(0, rect.Height - toolbarRect.Height);
         _dockTopOffsetPx = Math.Clamp(toolbarRect.Top - rect.Top, 0, maxOffset);
-        _hasDockPosition = true;
         ApplyDockPosition(rect);
     }
 
@@ -247,8 +264,8 @@ public sealed class FloatingToolbarWindow : Window
         var maxOffset = Math.Max(0, rect.Height - toolbarRect.Height);
         _dockTopOffsetPx = Math.Clamp(_dockTopOffsetPx, 0, maxOffset);
         var left = _dockSide == DockSide.Right
-            ? rect.Right + DockGap
-            : rect.Left - toolbarRect.Width - DockGap;
+            ? rect.Right
+            : rect.Left - toolbarRect.Width;
         var top = rect.Top + _dockTopOffsetPx;
         Native.SetWindowPos(toolbarHandle, Native.HwndTopmost, left, top, 0, 0, Native.SwpNoSize | Native.SwpNoActivate | Native.SwpShowWindow);
     }
@@ -271,7 +288,7 @@ public sealed class FloatingToolbarWindow : Window
 
     protected override void OnClosing(CancelEventArgs e)
     {
-        if (!_closing && _recorder.IsRecording)
+        if (!_closing && _recorder.HasPendingRecording)
         {
             e.Cancel = true;
             _closing = true;
@@ -283,9 +300,18 @@ public sealed class FloatingToolbarWindow : Window
 
     private async Task CloseAfterRecordingAsync()
     {
-        try { await _recorder.StopAsync(); }
-        catch { }
-        await Dispatcher.InvokeAsync(Close);
+        try
+        {
+            var file = await _recorder.StopAsync();
+            if (!string.IsNullOrWhiteSpace(file))
+                MessageBox.Show($"录屏已保存：\n{file}", "录屏完成", MessageBoxButton.OK, MessageBoxImage.Information);
+            await Dispatcher.InvokeAsync(Close);
+        }
+        catch (Exception ex)
+        {
+            _closing = false;
+            MessageBox.Show($"录屏尚未安全保存，快捷栏会保留供重试：\n{ex.Message}", "录屏失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
     }
 
     private static string Sanitize(string value)
@@ -300,10 +326,19 @@ public sealed class FloatingToolbarWindow : Window
         public const uint SwpNoSize = 0x0001;
         public const uint SwpNoActivate = 0x0010;
         public const uint SwpShowWindow = 0x0040;
+        private const int ExtendedFrameBounds = 9;
 
         [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern IntPtr FindWindow(string? className, string? windowName);
         [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out Rect rect);
+        [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr hWnd);
         [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr insertAfter, int x, int y, int cx, int cy, uint flags);
+        [DllImport("dwmapi.dll")] private static extern int DwmGetWindowAttribute(IntPtr hWnd, int attribute, out Rect rect, int size);
+
+        public static bool GetVisibleWindowRect(IntPtr hWnd, out Rect rect)
+        {
+            if (DwmGetWindowAttribute(hWnd, ExtendedFrameBounds, out rect, Marshal.SizeOf<Rect>()) == 0 && rect.Width > 0 && rect.Height > 0) return true;
+            return GetWindowRect(hWnd, out rect);
+        }
 
         [StructLayout(LayoutKind.Sequential)]
         public struct Rect
