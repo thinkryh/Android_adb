@@ -3,25 +3,96 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-        <SolidColorBrush x:Key="WindowBrush" Color="#EFF7FB" />
-        <SolidColorBrush x:Key="PanelBrush" Color="#DFF0F5" />
-        <SolidColorBrush x:Key="PanelStrongBrush" Color="#F7FCFE" />
-        <SolidColorBrush x:Key="TextBrush" Color="#17252E" />
-        <SolidColorBrush x:Key="MutedTextBrush" Color="#60737D" />
-        <SolidColorBrush x:Key="AccentBrush" Color="#287D92" />
-        <SolidColorBrush x:Key="AccentLightBrush" Color="#CDEAF0" />
-        <SolidColorBrush x:Key="DangerBrush" Color="#B84E55" />
-        <SolidColorBrush x:Key="BorderBrush" Color="#FFFFFF" />
+        <LinearGradientBrush x:Key="WindowBrush" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#F8FBFF" Offset="0" />
+            <GradientStop Color="#E7F1FB" Offset="0.56" />
+            <GradientStop Color="#DCECF7" Offset="1" />
+        </LinearGradientBrush>
+        <LinearGradientBrush x:Key="PanelBrush" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#EFFFFFFF" Offset="0" />
+            <GradientStop Color="#C8EAF5FF" Offset="1" />
+        </LinearGradientBrush>
+        <LinearGradientBrush x:Key="PanelStrongBrush" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#F8FFFFFF" Offset="0" />
+            <GradientStop Color="#DDE9F4FF" Offset="1" />
+        </LinearGradientBrush>
+        <LinearGradientBrush x:Key="ToolbarGlassBrush" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#F8FFFFFF" Offset="0" />
+            <GradientStop Color="#E7F6FCFF" Offset="0.46" />
+            <GradientStop Color="#D1DFEDFF" Offset="1" />
+        </LinearGradientBrush>
+        <SolidColorBrush x:Key="TextBrush" Color="#1D2938" />
+        <SolidColorBrush x:Key="MutedTextBrush" Color="#68798B" />
+        <SolidColorBrush x:Key="AccentBrush" Color="#2770E8" />
+        <SolidColorBrush x:Key="AccentLightBrush" Color="#DCEBFF" />
+        <SolidColorBrush x:Key="DangerBrush" Color="#DC4D64" />
+        <SolidColorBrush x:Key="BorderBrush" Color="#EFFFFFFF" />
         <Style TargetType="TextBlock">
             <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
-            <Setter Property="FontFamily" Value="Microsoft YaHei UI" />
+            <Setter Property="FontFamily" Value="Segoe UI Variable,Microsoft YaHei UI" />
         </Style>
         <Style TargetType="Button">
-            <Setter Property="FontFamily" Value="Microsoft YaHei UI" />
+            <Setter Property="FontFamily" Value="Segoe UI Variable,Microsoft YaHei UI" />
             <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
             <Setter Property="Padding" Value="14,8" />
             <Setter Property="Margin" Value="0,0,8,0" />
             <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Background" Value="{StaticResource PanelStrongBrush}" />
+            <Setter Property="BorderBrush" Value="#B8FFFFFF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Surface" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="14" SnapsToDevicePixels="True">
+                            <Grid>
+                                <Border x:Name="HoverLight" CornerRadius="13" Background="#45FFFFFF" Opacity="0" />
+                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                  Margin="{TemplateBinding Padding}" RecognizesAccessKey="True" />
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="HoverLight" Property="Opacity" Value="1" /></Trigger>
+                            <Trigger Property="IsPressed" Value="True"><Setter TargetName="Surface" Property="Opacity" Value="0.72" /></Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Surface" Property="Opacity" Value="0.45" /></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="ToolbarButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Width" Value="48" />
+            <Setter Property="Height" Value="48" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0,0,0,3" />
+            <Setter Property="Background" Value="#84FFFFFF" />
+            <Setter Property="BorderBrush" Value="#D2FFFFFF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="FontFamily" Value="Segoe UI Variable,Microsoft YaHei UI" />
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+            <Setter Property="Background" Value="#ECFFFFFF" />
+            <Setter Property="BorderBrush" Value="#A9C8DEEF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10">
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </Application.Resources>
 </Application>

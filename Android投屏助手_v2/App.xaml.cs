@@ -11,7 +11,7 @@ public partial class App : Application
         _mutex = new Mutex(true, "Android投屏助手-v2", out var created);
         if (!created)
         {
-            MessageBox.Show("Android投屏助手已经在运行。", "Android投屏助手", MessageBoxButton.OK, MessageBoxImage.Information);
+            GlassDialog.Message(null, "Android投屏助手", "助手已经在运行，请切回现有窗口。");
             Shutdown();
             return;
         }

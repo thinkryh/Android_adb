@@ -21,6 +21,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        GlassWindowEffects.EnableRoundedCorners(this);
         var root = FindBundleRoot();
         var scrcpyRoot = System.IO.Path.Combine(root, "scrcpy");
         var adb = new AdbService(System.IO.Path.Combine(scrcpyRoot, "adb.exe"));
@@ -38,7 +39,7 @@ public partial class MainWindow : Window
     {
         if (!_viewModel.Adb.Exists)
         {
-            MessageBox.Show("没有找到 scrcpy 文件夹或 adb.exe。\n请保持发布目录中的 scrcpy 文件夹完整。", "Android投屏助手", MessageBoxButton.OK, MessageBoxImage.Warning);
+            GlassDialog.Message(this, "缺少程序组件", "没有找到 scrcpy 文件夹或 adb.exe。\n请保持发布目录中的 scrcpy 文件夹完整。", true);
             return;
         }
         await _viewModel.RefreshAsync();
@@ -56,9 +57,10 @@ public partial class MainWindow : Window
     private void Window_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
         _deviceTimer.Stop();
-        if (MessageBox.Show("关闭主界面后，已打开的投屏窗口仍会继续运行。\n要退出助手并关闭主界面吗？", "Android投屏助手", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+        if (!GlassDialog.Confirm(this, "退出助手", "关闭主界面后，已打开的投屏窗口仍会继续运行。\n确定要退出主界面吗？", "退出主界面", "继续使用"))
         {
             e.Cancel = true;
+            if (IsLoaded) _deviceTimer.Start();
         }
     }
 
@@ -80,7 +82,7 @@ public partial class MainWindow : Window
         var connect = services.Where(x => !x.IsPairing).ToList();
         if (connect.Count == 0)
         {
-            MessageBox.Show("没有发现可连接的无线调试服务。\n请确认手机已开启无线调试，并与电脑连接同一网络。", "mDNS 发现", MessageBoxButton.OK, MessageBoxImage.Information);
+            GlassDialog.Message(this, "mDNS 发现", "没有发现可连接的无线调试服务。\n请确认手机已开启无线调试，并与电脑连接同一网络。");
             return;
         }
         var selected = ShowSelectionDialog("选择无线设备", connect.Select(x => $"{x.Address}  {x.ServiceName}").ToList());
@@ -96,27 +98,17 @@ public partial class MainWindow : Window
         using var qrData = generator.CreateQrCode(payload, QRCodeGenerator.ECCLevel.Q);
         using var qrCode = new PngByteQRCode(qrData);
         var bytes = qrCode.GetGraphic(8);
-        var window = new Window
-        {
-            Title = "扫码配对",
-            Width = 430,
-            Height = 560,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Owner = this,
-            Background = Brushes.White,
-            ResizeMode = ResizeMode.NoResize
-        };
         var image = new Image { Source = ToBitmap(bytes), Width = 300, Height = 300, Margin = new Thickness(0, 12, 0, 8) };
         var start = new Button { Content = "我已扫码，开始查找", Padding = new Thickness(16, 8, 16, 8), HorizontalAlignment = HorizontalAlignment.Center };
         var status = new TextBlock { Text = "手机：设置 → 开发者选项 → 无线调试 → 使用二维码配对", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(25, 0, 25, 12), Foreground = Brushes.DimGray };
         var panel = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
         using var pairingCancellation = new CancellationTokenSource();
-        window.Closed += (_, _) => pairingCancellation.Cancel();
         panel.Children.Add(new TextBlock { Text = "请使用手机无线调试页面扫描", FontSize = 16, FontWeight = FontWeights.SemiBold, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 18, 0, 0) });
         panel.Children.Add(image);
         panel.Children.Add(status);
         panel.Children.Add(start);
-        window.Content = panel;
+        var window = GlassDialog.Form(this, "扫码配对", 430, 590, panel);
+        window.Closed += (_, _) => pairingCancellation.Cancel();
         start.Click += async (_, _) =>
         {
             start.IsEnabled = false;
@@ -167,7 +159,7 @@ public partial class MainWindow : Window
             });
             toolbar.Show();
         }
-        catch (Exception ex) { MessageBox.Show(ex.Message, "投屏启动失败", MessageBoxButton.OK, MessageBoxImage.Warning); }
+        catch (Exception ex) { GlassDialog.Message(this, "投屏启动失败", ex.Message, true); }
     }
 
     private void StopMirror_Click(object sender, RoutedEventArgs e)
@@ -197,7 +189,7 @@ public partial class MainWindow : Window
         return image;
     }
 
-    private static string? Prompt(string title, string message)
+    private string? Prompt(string title, string message)
     {
         var box = new TextBox { Width = 330, Margin = new Thickness(0, 8, 0, 18) };
         var ok = new Button { Content = "连接", IsDefault = true, Width = 80, HorizontalAlignment = HorizontalAlignment.Right };
@@ -206,12 +198,12 @@ public partial class MainWindow : Window
         var panel = new StackPanel { Margin = new Thickness(22) };
         panel.Children.Add(new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap });
         panel.Children.Add(box); panel.Children.Add(buttons);
-        var window = new Window { Title = title, Content = panel, Width = 430, Height = 190, WindowStartupLocation = WindowStartupLocation.CenterOwner, ResizeMode = ResizeMode.NoResize };
+        var window = GlassDialog.Form(this, title, 430, 240, panel);
         ok.Click += (_, _) => window.DialogResult = true;
         return window.ShowDialog() == true ? box.Text : null;
     }
 
-    private static (string PairAddress, string Code, string? ConnectAddress)? ShowPairDialog()
+    private (string PairAddress, string Code, string? ConnectAddress)? ShowPairDialog()
     {
         var pair = new TextBox { Margin = new Thickness(0, 4, 0, 10) };
         var code = new TextBox { Margin = new Thickness(0, 4, 0, 10) };
@@ -224,18 +216,18 @@ public partial class MainWindow : Window
         panel.Children.Add(new TextBlock { Text = "六位配对码" }); panel.Children.Add(code);
         panel.Children.Add(new TextBlock { Text = "连接地址（可选，例如 192.168.1.10:45915）" }); panel.Children.Add(connect);
         panel.Children.Add(buttons);
-        var window = new Window { Title = "配对码连接", Content = panel, Width = 480, Height = 330, WindowStartupLocation = WindowStartupLocation.CenterOwner, ResizeMode = ResizeMode.NoResize };
+        var window = GlassDialog.Form(this, "配对码连接", 480, 365, panel);
         ok.Click += (_, _) => window.DialogResult = true;
         if (window.ShowDialog() != true) return null;
         return (pair.Text.Trim(), code.Text.Trim(), string.IsNullOrWhiteSpace(connect.Text) ? null : connect.Text.Trim());
     }
 
-    private static int? ShowSelectionDialog(string title, IReadOnlyList<string> items)
+    private int? ShowSelectionDialog(string title, IReadOnlyList<string> items)
     {
         var list = new ListBox { ItemsSource = items, SelectedIndex = 0, Margin = new Thickness(18) };
         var ok = new Button { Content = "连接选中设备", IsDefault = true, Width = 120, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(18, 0, 18, 18) };
         var panel = new DockPanel(); DockPanel.SetDock(ok, Dock.Bottom); panel.Children.Add(ok); panel.Children.Add(list);
-        var window = new Window { Title = title, Content = panel, Width = 500, Height = 320, WindowStartupLocation = WindowStartupLocation.CenterOwner, ResizeMode = ResizeMode.NoResize };
+        var window = GlassDialog.Form(this, title, 500, 350, panel);
         ok.Click += (_, _) => window.DialogResult = true;
         return window.ShowDialog() == true && list.SelectedIndex >= 0 ? list.SelectedIndex : null;
     }

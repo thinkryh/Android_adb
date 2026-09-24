@@ -32,6 +32,8 @@
                 <RowDefinition Height="42" />
             </Grid.RowDefinitions>
 
+            <Border Grid.Row="0" Margin="12,10,12,2" Background="{StaticResource PanelBrush}"
+                    BorderBrush="#CFFFFFFF" BorderThickness="1" CornerRadius="19" IsHitTestVisible="False" />
             <Grid Grid.Row="0" MouseLeftButtonDown="Header_MouseLeftButtonDown">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
