@@ -2,7 +2,7 @@
 
 面向 Windows 的 Android 投屏工具。图形版使用 WPF 管理设备和连接，实际投屏仍由仓库内的 scrcpy 与 ADB 完成。项目保留 v1 批处理／PowerShell 流程作为图形版不可用时的回退入口。
 
-> 仓库提供 v2 源码及 scrcpy／ADB 组件；`bin/` 和 `obj/` 不提交到 Git。**仅从 GitHub 克隆仓库，不会得到已构建的 v2 图形版可执行文件。**请先构建，或另取完整发布包。详见[文件状态](docs/文件状态.md)。
+> 仓库提供 v2 源码及 scrcpy／ADB 组件；`bin/` 和 `obj/` 不提交到 Git。**仅从 GitHub 克隆仓库，不会得到已构建的 v2 图形版可执行文件。**请先构建，或从 [Releases](https://github.com/thinkryh/Android_adb/releases) 下载完整的 Windows x64 压缩包。详见[文件状态](docs/文件状态.md)。
 
 ## 现在能做什么
 
@@ -17,12 +17,14 @@
 
 在 Windows 10／11 上，保持整个项目目录完整，双击根目录的 `Android投屏助手.bat`。脚本会优先查找本机 v2 发布程序；找不到时使用 `程序组件/Android投屏助手.ps1` 的 v1 流程。不要单独复制 `.bat`。手机须开启 USB 调试并授权；无线调试还要求手机和电脑处于可互通网络。
 
-从源码运行 v2 需要 .NET 10 SDK；当前发布配置为**依赖框架**，目标电脑运行 v2 还需要 .NET 10 Desktop Runtime。项目目录下执行：
+从源码运行 v2 需要 .NET 10 SDK；当前发布配置为**依赖框架**，目标电脑运行 v2 还需要 [.NET 10 Desktop Runtime（Windows x64）](https://dotnet.microsoft.com/zh-cn/download/dotnet/10.0)。下载发布包后先解压整个文件夹，再运行其中的 `Android投屏助手.exe`；不要只复制 EXE。项目目录下执行：
 
 ```powershell
 dotnet restore .\Android投屏助手_v2\Android投屏助手.csproj
 dotnet publish .\Android投屏助手_v2\Android投屏助手.csproj -c Release --self-contained false -o .\发布版
 ```
+
+`v2.0.0-preview.1` 为预览版；发布范围、验证情况及已知限制见[版本说明](docs/发布说明-v2.0.0-preview.1.md)。
 
 构建时项目会把上级 `scrcpy/`、项目许可证和第三方声明复制进 `发布版/`。两个 BAT 均使用根目录的统一启动流程，优先启动 `发布版/`，其次使用 Release 构建输出；没有图形程序时退回 v1。
 
