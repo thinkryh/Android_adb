@@ -2,6 +2,16 @@
 setlocal
 chcp 65001 >nul
 set "ROOT=%~dp0"
+set "V2_GLASS_V15=%ROOT%Android投屏助手_v2\bin\Release\net10.0-windows\glass-v15\Android投屏助手.exe"
+if exist "%V2_GLASS_V15%" (
+    start "" "%V2_GLASS_V15%"
+    exit /b 0
+)
+set "V2_GLASS_V14=%ROOT%Android投屏助手_v2\bin\Release\net10.0-windows\glass-v14\Android投屏助手.exe"
+if exist "%V2_GLASS_V14%" (
+    start "" "%V2_GLASS_V14%"
+    exit /b 0
+)
 set "V2_GLASS_V13=%ROOT%Android投屏助手_v2\bin\Release\net10.0-windows\glass-v13\Android投屏助手.exe"
 if exist "%V2_GLASS_V13%" (
     start "" "%V2_GLASS_V13%"

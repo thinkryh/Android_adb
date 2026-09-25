@@ -47,7 +47,11 @@ public partial class MainWindow : Window
             return;
         }
         await _viewModel.RefreshAsync();
-        if (!_exitInProgress && !_exitApproved) _deviceTimer.Start();
+        if (_exitInProgress || _exitApproved) return;
+        _deviceTimer.Start();
+        // 仅在首次打开时自动启动唯一的已授权设备；后续刷新和多设备连接仍由用户选择。
+        if (_viewModel.Devices.Count == 1 && _viewModel.Devices[0].Status == DeviceStatus.Online)
+            await StartMirrorForDeviceAsync(_viewModel.Devices[0]);
     }
 
     private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -169,9 +173,13 @@ public partial class MainWindow : Window
 
     private async void StartMirror_Click(object sender, RoutedEventArgs e)
     {
-        if (_exitInProgress) return;
         if ((sender as Button)?.Tag is not DeviceViewModel item) return;
-        if (item.Status is DeviceStatus.Mirroring or DeviceStatus.Connecting) return;
+        await StartMirrorForDeviceAsync(item);
+    }
+
+    private async Task StartMirrorForDeviceAsync(DeviceViewModel item)
+    {
+        if (_exitInProgress || _exitApproved || item.Status is DeviceStatus.Mirroring or DeviceStatus.Connecting) return;
         try
         {
             var process = await _viewModel.StartMirrorAsync(item);
