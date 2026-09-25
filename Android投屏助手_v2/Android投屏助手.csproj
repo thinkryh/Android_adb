@@ -20,5 +20,8 @@
   <ItemGroup>
     <ScrcpyFiles Include="..\scrcpy\**\*" />
     <Content Include="@(ScrcpyFiles)" LinkBase="scrcpy" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\LICENSE" Link="LICENSE" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\THIRD_PARTY_NOTICES.md" Link="THIRD_PARTY_NOTICES.md" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\third_party_licenses\**\*" LinkBase="third_party_licenses" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

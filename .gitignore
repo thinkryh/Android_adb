@@ -3,6 +3,8 @@
 历史文件/
 Android投屏助手_v2/bin/
 Android投屏助手_v2/obj/
+发布版/
+.verify-adb-home*/
 .dotnet-cli-home/
 .nuget-packages/
 .local-nuget/

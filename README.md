@@ -21,10 +21,10 @@
 
 ```powershell
 dotnet restore .\Android投屏助手_v2\Android投屏助手.csproj
-dotnet publish .\Android投屏助手_v2\Android投屏助手.csproj -c Release --self-contained false -o .\Android投屏助手_v2\bin\Release\net10.0-windows\glass-v16
+dotnet publish .\Android投屏助手_v2\Android投屏助手.csproj -c Release --self-contained false -o .\发布版
 ```
 
-构建时项目会把上级 `scrcpy/` 复制进输出目录。启动脚本会优先使用 `glass-v16`；如采用其他输出目录，请先核对启动脚本的候选顺序。`Android投屏助手_v2/Android投屏助手_v2.bat` 是旧的开发入口，未列入最新 `glass-v16` 查找路径。
+构建时项目会把上级 `scrcpy/`、项目许可证和第三方声明复制进 `发布版/`。两个 BAT 均使用根目录的统一启动流程，优先启动 `发布版/`，其次使用 Release 构建输出；没有图形程序时退回 v1。
 
 ## 目录
 
@@ -32,10 +32,11 @@ dotnet publish .\Android投屏助手_v2\Android投屏助手.csproj -c Release --
 Android投屏助手_v1/
 ├─ Android投屏助手.bat          当前总入口，v2 优先、v1 回退
 ├─ Android投屏助手_v2/          WPF 源码、项目文件和本地构建输出
+├─ 发布版/                    本地完整运行目录；不提交 Git
 ├─ 程序组件/                    v1 PowerShell 启动脚本
 ├─ scrcpy/                     随仓库提供的 scrcpy、ADB 与依赖文件
 ├─ docs/                       产品、技术、验证与文件状态
 └─ Android投屏助手使用说明.txt  简明使用说明
 ```
 
-`scrcpy`、ADB 和 QRCoder 为第三方组件，分发时应保留相应版权及许可证信息；仓库内附有 `scrcpy/LICENSE.txt`。本项目的玻璃外观是 WPF 样式实现，不等同于 iOS 的系统级 Liquid Glass 材质。
+项目自行编写的源码和文档按 [MIT 许可证](LICENSE)授权，版权署名为 thinkryh。`scrcpy`、ADB、FFmpeg、SDL、libusb 和 QRCoder 保留各自许可；来源、已核对内容与再分发前待办见[第三方组件声明](THIRD_PARTY_NOTICES.md)。本项目的玻璃外观是 WPF 样式实现，不等同于 iOS 的系统级 Liquid Glass 材质。
