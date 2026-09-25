@@ -6,7 +6,7 @@
 
 ## 现在能做什么
 
-- 识别 USB、IP 无线、mDNS 和模拟器设备，纵向展示连接／授权／投屏状态；启动时只有一台已授权设备会自动投屏，多设备由用户分别启动。
+- 识别 USB、IP 无线、mDNS 和模拟器设备，每行展示两张设备卡片；启动时只有一台已授权设备会自动投屏，多设备由用户分别启动。
 - 提供 IP 直连、六位配对码配对、二维码配对入口与 mDNS 服务发现；无设备时尝试最近保存的无线连接地址。
 - 无线默认均衡画质；快捷栏可吸附、自由拖动、收起，并提供置顶、主页、返回、最近任务、截图、录屏。
 - 默认黑夜模式，可在主界面切换浅色模式；截图和录屏保存到当前用户的“图片\Android投屏助手”。
@@ -21,10 +21,10 @@
 
 ```powershell
 dotnet restore .\Android投屏助手_v2\Android投屏助手.csproj
-dotnet publish .\Android投屏助手_v2\Android投屏助手.csproj -c Release --self-contained false -o .\Android投屏助手_v2\bin\Release\net10.0-windows\glass-v15
+dotnet publish .\Android投屏助手_v2\Android投屏助手.csproj -c Release --self-contained false -o .\Android投屏助手_v2\bin\Release\net10.0-windows\glass-v16
 ```
 
-构建时项目会把上级 `scrcpy/` 复制进输出目录。启动脚本会优先使用 `glass-v15`；如采用其他输出目录，请先核对启动脚本的候选顺序。`Android投屏助手_v2/Android投屏助手_v2.bat` 是旧的开发入口，未列入最新 `glass-v15` 查找路径。
+构建时项目会把上级 `scrcpy/` 复制进输出目录。启动脚本会优先使用 `glass-v16`；如采用其他输出目录，请先核对启动脚本的候选顺序。`Android投屏助手_v2/Android投屏助手_v2.bat` 是旧的开发入口，未列入最新 `glass-v16` 查找路径。
 
 ## 目录
 

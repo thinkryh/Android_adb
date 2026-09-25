@@ -40,6 +40,7 @@ public sealed class DeviceViewModel : ObservableObject
     public void UpdateDevice(AdbDevice device, bool mirroring)
     {
         Device = device;
+        DisplayName = device.DisplayName;
         OnPropertyChanged(nameof(ConnectionLabel));
         OnPropertyChanged(nameof(SystemLabel));
         if (mirroring) Status = DeviceStatus.Mirroring;

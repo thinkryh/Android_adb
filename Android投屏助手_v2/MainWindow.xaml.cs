@@ -94,13 +94,15 @@ public partial class MainWindow : Window
     private async void AddWireless_Click(object sender, RoutedEventArgs e)
     {
         var address = Prompt("IP 直连", "请输入无线连接地址（例如 192.168.1.10:45915）：");
-        if (!string.IsNullOrWhiteSpace(address)) await _viewModel.ConnectIpAsync(address.Trim());
+        if (!string.IsNullOrWhiteSpace(address) && !await _viewModel.ConnectIpAsync(address.Trim()))
+            GlassDialog.Message(this, "无线连接失败", _viewModel.StatusText, true);
     }
 
     private async void PairCode_Click(object sender, RoutedEventArgs e)
     {
         var values = ShowPairDialog();
-        if (values is not null) await _viewModel.PairCodeAsync(values.Value.PairAddress, values.Value.Code, values.Value.ConnectAddress);
+        if (values is not null && !await _viewModel.PairCodeAsync(values.Value.PairAddress, values.Value.Code, values.Value.ConnectAddress))
+            GlassDialog.Message(this, "无线配对失败", _viewModel.StatusText, true);
     }
 
     private async void Mdns_Click(object sender, RoutedEventArgs e)
@@ -113,7 +115,8 @@ public partial class MainWindow : Window
             return;
         }
         var selected = ShowSelectionDialog("选择无线设备", connect.Select(x => $"{x.Address}  {x.ServiceName}").ToList());
-        if (selected is not null) await _viewModel.ConnectIpAsync(connect[selected.Value].Address);
+        if (selected is not null && !await _viewModel.ConnectIpAsync(connect[selected.Value].Address))
+            GlassDialog.Message(this, "无线连接失败", _viewModel.StatusText, true);
     }
 
     private async void QrPair_Click(object sender, RoutedEventArgs e)
@@ -146,9 +149,13 @@ public partial class MainWindow : Window
                 if (endpoint is null) throw new InvalidOperationException("等待扫码超时，请保持手机和电脑在同一网络。");
                 if (!await _viewModel.Adb.PairAsync(endpoint.Address, password)) throw new InvalidOperationException("扫码配对失败。");
                 status.Text = "配对成功，正在查找连接服务…";
-                var connect = await WaitForMdnsAsync(string.Empty, false, TimeSpan.FromSeconds(30), pairingCancellation.Token);
-                if (connect is not null) await _viewModel.ConnectIpAsync(connect.Address);
-                status.Text = "配对成功，可以关闭此窗口。";
+                var connect = await WaitForMdnsAsync(string.Empty, false, TimeSpan.FromSeconds(30), pairingCancellation.Token,
+                    EndpointHost(endpoint.Address));
+                if (connect is null)
+                    throw new InvalidOperationException("配对成功，但没有发现连接服务。请从无线调试主页面获取连接地址，并使用 IP 直连。");
+                if (!await _viewModel.ConnectIpAsync(connect.Address))
+                    throw new InvalidOperationException($"配对成功，但连接失败：{_viewModel.StatusText}");
+                status.Text = "配对及连接成功，可以关闭此窗口。";
             }
             catch (OperationCanceledException) { status.Text = "扫码配对已取消。"; }
             catch (Exception ex) { status.Text = ex.Message; }
@@ -157,14 +164,19 @@ public partial class MainWindow : Window
         window.ShowDialog();
     }
 
-    private async Task<MdnsEndpoint?> WaitForMdnsAsync(string serviceName, bool pairing, TimeSpan timeout, CancellationToken cancellationToken)
+    private static string EndpointHost(string address) => address[..address.LastIndexOf(':')].Trim('[', ']');
+
+    private async Task<MdnsEndpoint?> WaitForMdnsAsync(string serviceName, bool pairing, TimeSpan timeout,
+        CancellationToken cancellationToken, string? host = null)
     {
         var end = DateTime.UtcNow + timeout;
         while (DateTime.UtcNow < end)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var services = await _viewModel.DiscoverMdnsAsync();
-            var endpoint = services.FirstOrDefault(x => x.IsPairing == pairing && (string.IsNullOrWhiteSpace(serviceName) || x.ServiceName.Contains(serviceName, StringComparison.OrdinalIgnoreCase)));
+            var endpoint = services.FirstOrDefault(x => x.IsPairing == pairing
+                && (string.IsNullOrWhiteSpace(serviceName) || x.ServiceName.Contains(serviceName, StringComparison.OrdinalIgnoreCase))
+                && (host is null || EndpointHost(x.Address).Equals(host, StringComparison.OrdinalIgnoreCase)));
             if (endpoint is not null) return endpoint;
             await Task.Delay(1000, cancellationToken);
         }

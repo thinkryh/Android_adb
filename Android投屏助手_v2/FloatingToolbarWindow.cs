@@ -99,7 +99,7 @@ public sealed class FloatingToolbarWindow : Window
         _dragArea.MouseLeftButtonDown += Handle_MouseLeftButtonDown;
         _panel.Children.Add(_dragArea);
 
-        _collapseButton = AddButton(_panel, Geometry.Parse("M 7,9 L 12,14 L 17,9"), "收起工具栏", ToggleCollapseAsync);
+        _collapseButton = AddButton(_panel, Geometry.Parse("M 7,15 L 12,10 L 17,15"), "收起工具栏", ToggleCollapseAsync);
         _collapseButton.Height = 26;
         _collapseButton.Margin = new Thickness(0, 0, 0, 5);
 
@@ -272,8 +272,8 @@ public sealed class FloatingToolbarWindow : Window
     private void UpdateCollapseButton()
     {
         var icon = (Canvas)CreateIcon(Geometry.Parse(_isCollapsed
-            ? "M 7,15 L 12,10 L 17,15"
-            : "M 7,9 L 12,14 L 17,9"));
+            ? "M 7,9 L 12,14 L 17,9"
+            : "M 7,15 L 12,10 L 17,15"));
         if (_isCollapsed && _recorder.HasPendingRecording)
         {
             var dot = new System.Windows.Shapes.Ellipse { Width = 5, Height = 5, IsHitTestVisible = false };

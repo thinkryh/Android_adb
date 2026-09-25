@@ -83,12 +83,12 @@
                     <ItemsControl ItemsSource="{Binding Devices}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <StackPanel />
+                                <UniformGrid Columns="2" />
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border MinHeight="138" Margin="0,0,0,12" Padding="20,16"
+                                <Border MinHeight="138" Margin="0,0,12,12" Padding="18,16"
                                         Background="{DynamicResource PanelStrongBrush}"
                                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                                         CornerRadius="22">
