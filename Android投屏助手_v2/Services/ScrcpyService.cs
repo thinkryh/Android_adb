@@ -9,6 +9,7 @@ public sealed class ScrcpyService
     private readonly string _scrcpyPath;
     private readonly string _adbPath;
     private readonly Dictionary<string, Process> _sessions = new(StringComparer.OrdinalIgnoreCase);
+    private readonly object _sessionLock = new();
 
     public ScrcpyService(string scrcpyPath, string adbPath)
     {
@@ -17,12 +18,28 @@ public sealed class ScrcpyService
     }
 
     public bool Exists => File.Exists(_scrcpyPath);
-    public IReadOnlyDictionary<string, Process> Sessions => _sessions;
+    public IReadOnlyDictionary<string, Process> Sessions
+    {
+        get { lock (_sessionLock) return new Dictionary<string, Process>(_sessions, StringComparer.OrdinalIgnoreCase); }
+    }
+
+    public bool IsRunning(string serial)
+    {
+        lock (_sessionLock)
+        {
+            if (!_sessions.TryGetValue(serial, out var process)) return false;
+            try { return !process.HasExited; }
+            catch (InvalidOperationException) { return false; }
+        }
+    }
 
     public async Task<Process> StartAsync(AdbDevice device, CancellationToken cancellationToken = default)
     {
         if (!Exists) throw new FileNotFoundException("找不到 scrcpy.exe，请检查 scrcpy 文件夹。", _scrcpyPath);
-        if (_sessions.TryGetValue(device.Serial, out var existing) && !existing.HasExited) return existing;
+        lock (_sessionLock)
+        {
+            if (_sessions.TryGetValue(device.Serial, out var existing) && !existing.HasExited) return existing;
+        }
         var wireless = device.ConnectionType is DeviceConnectionType.Wifi or DeviceConnectionType.Mdns;
         var process = new Process
         {
@@ -38,18 +55,62 @@ public sealed class ScrcpyService
         process.StartInfo.Environment["ADB"] = _adbPath;
         foreach (var arg in BuildArguments(device, wireless)) process.StartInfo.ArgumentList.Add(arg);
         if (!process.Start()) throw new InvalidOperationException("无法启动投屏进程。");
-        _sessions[device.Serial] = process;
-        process.Exited += (_, _) => _sessions.Remove(device.Serial);
+        process.Exited += (_, _) =>
+        {
+            lock (_sessionLock)
+            {
+                if (_sessions.TryGetValue(device.Serial, out var current) && ReferenceEquals(current, process))
+                    _sessions.Remove(device.Serial);
+            }
+        };
+        lock (_sessionLock) _sessions[device.Serial] = process;
         await Task.Delay(700, cancellationToken);
-        if (process.HasExited) throw new InvalidOperationException("投屏窗口启动失败，请检查设备授权和无线连接。");
+        if (process.HasExited)
+        {
+            lock (_sessionLock)
+            {
+                if (_sessions.TryGetValue(device.Serial, out var current) && ReferenceEquals(current, process))
+                    _sessions.Remove(device.Serial);
+            }
+            throw new InvalidOperationException("投屏窗口启动失败，请检查设备授权和无线连接。");
+        }
         return process;
     }
 
     public void Stop(string serial)
     {
-        if (!_sessions.Remove(serial, out var process)) return;
-        if (!process.HasExited) process.CloseMainWindow();
+        Process? process;
+        lock (_sessionLock) _sessions.TryGetValue(serial, out process);
+        if (process is null) return;
+        if (!process.HasExited)
+        {
+            var closed = process.CloseMainWindow();
+            if (!closed || !process.WaitForExit(1200))
+            {
+                process.Kill(entireProcessTree: true);
+                if (!process.WaitForExit(2000))
+                    throw new InvalidOperationException($"投屏进程 {process.Id} 未能结束，请稍后重试。");
+            }
+        }
+        lock (_sessionLock)
+        {
+            if (_sessions.TryGetValue(serial, out var current) && ReferenceEquals(current, process))
+                _sessions.Remove(serial);
+        }
         process.Dispose();
+    }
+
+    public void StopAll()
+    {
+        string[] serials;
+        lock (_sessionLock) serials = _sessions.Keys.ToArray();
+        var errors = new List<Exception>();
+        foreach (var serial in serials)
+        {
+            try { Stop(serial); }
+            catch (Exception ex) { errors.Add(ex); }
+        }
+        if (errors.Count > 0) throw new AggregateException("部分投屏进程未能结束。", errors);
     }
 
     public static IEnumerable<string> BuildArguments(AdbDevice device, bool wireless)

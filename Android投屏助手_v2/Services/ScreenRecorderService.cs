@@ -34,10 +34,7 @@ public sealed class ScreenRecorderService
         if (IsRecording) return;
         if (HasPendingRecording) throw new InvalidOperationException("上一段录屏尚未导出，请先结束录屏。");
 
-        var videos = Environment.GetFolderPath(Environment.SpecialFolder.MyVideos);
-        if (string.IsNullOrWhiteSpace(videos)) videos = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Videos");
-        var folder = Path.Combine(videos, "Android投屏助手");
-        Directory.CreateDirectory(folder);
+        var folder = MediaStorage.GetFolder();
         var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss-fff");
         var safeName = Sanitize(displayName);
         _localFile = Path.Combine(folder, $"{safeName}-{stamp}.mp4");

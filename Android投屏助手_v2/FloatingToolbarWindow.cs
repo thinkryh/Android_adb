@@ -7,6 +7,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Automation;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -19,19 +20,20 @@ namespace Android投屏助手;
 public sealed class FloatingToolbarWindow : Window
 {
     private const int SnapDistance = 44;
-    private static readonly Color NeutralBorder = Color.FromRgb(224, 237, 251);
-    private static readonly Color DockedBorder = Color.FromRgb(133, 184, 247);
-    private static readonly Color SnapBorder = Color.FromRgb(48, 126, 239);
     private readonly DeviceViewModel _device;
     private readonly AdbService _adb;
     private readonly Process _scrcpyProcess;
-    private readonly Window _mainWindow;
     private readonly string _scrcpyTitle;
     private readonly ScreenRecorderService _recorder;
     private readonly DispatcherTimer _timer;
     private readonly DispatcherTimer _snapTimer;
     private readonly Stopwatch _snapWatch = new();
+    private readonly StackPanel _panel;
+    private readonly Border _dragArea;
     private readonly Border _shell;
+    private readonly Button _collapseButton;
+    private readonly Button _pinButton;
+    private readonly Button _captureButton;
     private readonly Button _recordButton;
     private readonly Native.WinEventProc _winEventProc;
     private IntPtr _trackedScrcpyHandle;
@@ -50,6 +52,12 @@ public sealed class FloatingToolbarWindow : Window
     private bool _hiddenForMinimize;
     private bool _autoFinalizeAttempted;
     private bool _closing;
+    private bool _forceClose;
+    private bool _hasClosed;
+    private Task? _recordingCloseTask;
+    private Task? _shutdownTask;
+    private bool _pinEnabled;
+    private bool _isCollapsed;
 
     private enum DockSide
     {
@@ -57,62 +65,66 @@ public sealed class FloatingToolbarWindow : Window
         Right
     }
 
-    public FloatingToolbarWindow(DeviceViewModel device, AdbService adb, Process scrcpyProcess, Window mainWindow, string scrcpyTitle)
+    public FloatingToolbarWindow(DeviceViewModel device, AdbService adb, Process scrcpyProcess, string scrcpyTitle)
     {
         _device = device;
         _adb = adb;
         _scrcpyProcess = scrcpyProcess;
-        _mainWindow = mainWindow;
         _scrcpyTitle = scrcpyTitle;
         _recorder = new ScreenRecorderService(adb, device.Device);
         _winEventProc = OnScrcpyWindowEvent;
 
         Title = "投屏快捷操作";
-        Width = 66;
+        Width = 60;
         SizeToContent = SizeToContent.Height;
         WindowStyle = WindowStyle.None;
-        AllowsTransparency = false;
-        Background = (Brush)Application.Current.FindResource("ToolbarGlassBrush");
+        AllowsTransparency = true;
+        Background = Brushes.Transparent;
         UseLayoutRounding = true;
         SnapsToDevicePixels = true;
         TextOptions.SetTextFormattingMode(this, TextFormattingMode.Display);
         TextOptions.SetTextRenderingMode(this, TextRenderingMode.ClearType);
-        Topmost = true;
+        Topmost = false;
         ShowInTaskbar = false;
-        GlassWindowEffects.EnableRoundedCorners(this);
-
-        var panel = new StackPanel { Margin = new Thickness(8, 7, 8, 7) };
-        var handle = new Border
+        _panel = new StackPanel { Margin = new Thickness(7, 7, 7, 7) };
+        _dragArea = new Border
         {
-            Width = 48,
-            Height = 25,
-            Margin = new Thickness(0, 0, 0, 7),
-            CornerRadius = new CornerRadius(13),
-            Background = new SolidColorBrush(Color.FromArgb(166, 224, 237, 253)),
-            BorderBrush = Brushes.White,
-            BorderThickness = new Thickness(1),
+            Width = 44,
+            Height = 12,
+            Margin = new Thickness(0, 0, 0, 5),
+            Background = Brushes.Transparent,
             Cursor = Cursors.SizeAll,
             ToolTip = "移动工具栏"
         };
-        handle.Child = CreateDragDots();
-        handle.MouseLeftButtonDown += Handle_MouseLeftButtonDown;
-        panel.Children.Add(handle);
+        _dragArea.MouseLeftButtonDown += Handle_MouseLeftButtonDown;
+        _panel.Children.Add(_dragArea);
 
-        AddButton(panel, Geometry.Parse("M 3.5,10.5 L 12,3.8 L 20.5,10.5 M 5.5,9.6 L 5.5,20 L 18.5,20 L 18.5,9.6 M 9.5,20 L 9.5,14.3 L 14.5,14.3 L 14.5,20"), "主页", () => RunKeyAsync("3"));
-        AddButton(panel, Geometry.Parse("M 13.5,5.2 L 6.6,12 L 13.5,18.8 M 6.6,12 L 20,12"), "返回", () => RunKeyAsync("4"));
-        AddButton(panel, Geometry.Parse("M 7,5.3 L 18.4,5.3 C 19.5,5.3 20.4,6.2 20.4,7.3 L 20.4,18.4 C 20.4,19.5 19.5,20.4 18.4,20.4 L 7,20.4 C 5.9,20.4 5,19.5 5,18.4 L 5,7.3 C 5,6.2 5.9,5.3 7,5.3 Z M 3.5,8.3 L 3.5,18.4 M 8,3.5 L 18,3.5"), "最近任务", () => RunKeyAsync("187"));
-        AddButton(panel, Geometry.Parse("M 4.7,7.8 L 7.2,7.8 L 8.8,5.5 L 15.2,5.5 L 16.8,7.8 L 19.3,7.8 C 20.3,7.8 21,8.5 21,9.5 L 21,18.1 C 21,19.1 20.3,19.8 19.3,19.8 L 4.7,19.8 C 3.7,19.8 3,19.1 3,18.1 L 3,9.5 C 3,8.5 3.7,7.8 4.7,7.8 Z M 12,10 A 3.5,3.5 0 1 0 12,17 A 3.5,3.5 0 1 0 12,10"), "截图", CaptureAsync);
-        _recordButton = AddButton(panel, new EllipseGeometry(new Point(12, 12), 5.7, 5.7), "开始录屏", ToggleRecordingAsync, true);
+        _collapseButton = AddButton(_panel, Geometry.Parse("M 7,9 L 12,14 L 17,9"), "收起工具栏", ToggleCollapseAsync);
+        _collapseButton.Height = 26;
+        _collapseButton.Margin = new Thickness(0, 0, 0, 5);
+
+        _pinButton = AddButton(_panel, Geometry.Parse("M 8,3.5 L 16,3.5 L 15,8.5 L 18,11.5 L 18,13.5 L 6,13.5 L 6,11.5 L 9,8.5 Z M 12,13.5 L 12,21"), "置顶投屏窗口", TogglePinAsync);
+        AddButton(_panel, Geometry.Parse("M 3.5,10.5 L 12,3.8 L 20.5,10.5 M 5.5,9.6 L 5.5,20 L 18.5,20 L 18.5,9.6 M 9.5,20 L 9.5,14.3 L 14.5,14.3 L 14.5,20"), "主页", () => RunKeyAsync("3"));
+        AddButton(_panel, Geometry.Parse("M 13.5,5.2 L 6.6,12 L 13.5,18.8 M 6.6,12 L 20,12"), "返回", () => RunKeyAsync("4"));
+        AddButton(_panel, Geometry.Parse("M 7,5.3 L 18.4,5.3 C 19.5,5.3 20.4,6.2 20.4,7.3 L 20.4,18.4 C 20.4,19.5 19.5,20.4 18.4,20.4 L 7,20.4 C 5.9,20.4 5,19.5 5,18.4 L 5,7.3 C 5,6.2 5.9,5.3 7,5.3 Z M 3.5,8.3 L 3.5,18.4 M 8,3.5 L 18,3.5"), "最近任务", () => RunKeyAsync("187"));
+        _captureButton = AddButton(_panel, Geometry.Parse("M 4.7,7.8 L 7.2,7.8 L 8.8,5.5 L 15.2,5.5 L 16.8,7.8 L 19.3,7.8 C 20.3,7.8 21,8.5 21,9.5 L 21,18.1 C 21,19.1 20.3,19.8 19.3,19.8 L 4.7,19.8 C 3.7,19.8 3,19.1 3,18.1 L 3,9.5 C 3,8.5 3.7,7.8 4.7,7.8 Z M 12,10 A 3.5,3.5 0 1 0 12,17 A 3.5,3.5 0 1 0 12,10"), "快速截图（右键保存原画）", () => CaptureAsync(false));
+        _captureButton.PreviewMouseRightButtonUp += async (_, e) =>
+        {
+            e.Handled = true;
+            await CaptureAsync(true);
+        };
+        _recordButton = AddButton(_panel, new EllipseGeometry(new Point(12, 12), 8.55, 8.55), "开始录屏", ToggleRecordingAsync, true);
 
         _shell = new Border
         {
-            Background = (Brush)Application.Current.FindResource("ToolbarGlassBrush"),
-            BorderBrush = new SolidColorBrush(NeutralBorder),
+            BorderBrush = (Brush)Application.Current.FindResource("ToolbarBorderBrush"),
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(26),
-            Child = panel
+            CornerRadius = new CornerRadius(24),
+            Child = _panel
         };
+        _shell.SetResourceReference(Border.BackgroundProperty, "ToolbarGlassBrush");
         Content = _shell;
+        ThemeManager.Changed += UpdateTheme;
 
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
         _timer.Tick += (_, _) =>
@@ -131,47 +143,38 @@ public sealed class FloatingToolbarWindow : Window
             _timer.Start();
             FollowScrcpyWindow();
         };
-        _mainWindow.StateChanged += MainWindow_StateChanged;
         Closed += (_, _) =>
         {
+            _hasClosed = true;
             _timer.Stop();
             _snapTimer.Stop();
-            _mainWindow.StateChanged -= MainWindow_StateChanged;
             StopTrackingScrcpyWindow();
+            ThemeManager.Changed -= UpdateTheme;
         };
     }
 
-    private static FrameworkElement CreateDragDots()
+    private void UpdateTheme()
     {
-        var dots = new Canvas { Width = 15, Height = 14, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, IsHitTestVisible = false };
-        for (var row = 0; row < 3; row++)
-        {
-            for (var col = 0; col < 2; col++)
-            {
-                var dot = new System.Windows.Shapes.Ellipse { Width = 2.6, Height = 2.6, Fill = new SolidColorBrush(Color.FromRgb(89, 124, 162)) };
-                Canvas.SetLeft(dot, 3 + col * 6);
-                Canvas.SetTop(dot, 1.6 + row * 4.6);
-                dots.Children.Add(dot);
-            }
-        }
-        return dots;
+        _shell.BorderBrush = new SolidColorBrush(_isSnapping ? ThemeManager.ToolbarSnapBorder :
+            _isDocked ? ThemeManager.ToolbarDockedBorder : ThemeManager.ToolbarNeutralBorder);
     }
 
-    private static FrameworkElement CreateIcon(Geometry geometry, bool filled = false)
+    private static FrameworkElement CreateIcon(Geometry geometry, bool filled = false, string? fillBrushKey = null)
     {
-        var ink = new SolidColorBrush(filled ? Color.FromRgb(238, 76, 94) : Color.FromRgb(42, 76, 116));
         var canvas = new Canvas { Width = 24, Height = 24, IsHitTestVisible = false };
-        canvas.Children.Add(new System.Windows.Shapes.Path
+        var path = new System.Windows.Shapes.Path
         {
             Data = geometry,
-            Stroke = filled ? null : ink,
             StrokeThickness = filled ? 0 : 1.85,
             StrokeStartLineCap = PenLineCap.Round,
             StrokeEndLineCap = PenLineCap.Round,
             StrokeLineJoin = PenLineJoin.Round,
-            Fill = filled ? ink : Brushes.Transparent,
+            Fill = filled ? null : Brushes.Transparent,
             IsHitTestVisible = false
-        });
+        };
+        path.SetResourceReference(filled ? System.Windows.Shapes.Shape.FillProperty : System.Windows.Shapes.Shape.StrokeProperty,
+            filled ? fillBrushKey ?? "RecordBrush" : "ToolbarIconBrush");
+        canvas.Children.Add(path);
         return canvas;
     }
 
@@ -185,14 +188,104 @@ public sealed class FloatingToolbarWindow : Window
             HorizontalAlignment = HorizontalAlignment.Center,
             HorizontalContentAlignment = HorizontalAlignment.Center,
             VerticalContentAlignment = VerticalAlignment.Center,
-            ToolTip = tooltip,
             UseLayoutRounding = true,
             SnapsToDevicePixels = true
         };
-        AutomationProperties.SetName(button, tooltip);
+        SetHint(button, tooltip);
         button.Click += async (_, _) => await action();
         panel.Children.Add(button);
         return button;
+    }
+
+    private static void SetHint(Button button, string label)
+    {
+        var hint = button.ToolTip as ToolTip ?? new ToolTip
+        {
+            Placement = PlacementMode.Left,
+            PlacementTarget = button
+        };
+        hint.Content = new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap, MaxWidth = 220 };
+        button.ToolTip = hint;
+        AutomationProperties.SetName(button, label);
+        ToolTipService.SetInitialShowDelay(button, 280);
+        ToolTipService.SetShowDuration(button, 7000);
+        ToolTipService.SetShowOnDisabled(button, true);
+    }
+
+    private void ShowNotice(string message)
+    {
+        var notice = new ToolTip
+        {
+            Content = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap, MaxWidth = 220 },
+            Placement = PlacementMode.Left,
+            PlacementTarget = _shell,
+            StaysOpen = true,
+            IsOpen = true
+        };
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+        timer.Tick += (_, _) => { timer.Stop(); notice.IsOpen = false; };
+        timer.Start();
+    }
+
+    private Task ToggleCollapseAsync()
+    {
+        _snapTimer.Stop();
+        _isSnapping = false;
+        if (!_isCollapsed && !_isDocked)
+        {
+            var projection = GetScrcpyHandle();
+            var toolbar = GetToolbarHandle();
+            if (projection != IntPtr.Zero && toolbar != IntPtr.Zero
+                && Native.GetDockWindowRect(projection, out var projectionRect)
+                && Native.GetVisibleWindowRect(toolbar, out var toolbarRect))
+            {
+                var leftDistance = Math.Abs(toolbarRect.Right - projectionRect.Left);
+                var rightDistance = Math.Abs(toolbarRect.Left - projectionRect.Right);
+                _dockSide = leftDistance < rightDistance ? DockSide.Left : DockSide.Right;
+                _dockTopOffsetPx = Math.Max(0, toolbarRect.Top - projectionRect.Top);
+            }
+            _isDocked = true;
+        }
+
+        _isCollapsed = !_isCollapsed;
+        _dragArea.Visibility = _isCollapsed ? Visibility.Collapsed : Visibility.Visible;
+        foreach (UIElement child in _panel.Children)
+            if (child is Button button && !ReferenceEquals(button, _collapseButton))
+                button.Visibility = _isCollapsed ? Visibility.Collapsed : Visibility.Visible;
+        _panel.Margin = new Thickness(_isCollapsed ? 4 : 7);
+        Width = _isCollapsed ? 36 : 60;
+        _collapseButton.Width = _isCollapsed ? 28 : 44;
+        _collapseButton.Height = _isCollapsed ? 28 : 26;
+        _collapseButton.Margin = new Thickness(0, 0, 0, _isCollapsed ? 0 : 5);
+        UpdateCollapseButton();
+        _shell.BeginAnimation(OpacityProperty,
+            new DoubleAnimation(0.65, 1, TimeSpan.FromMilliseconds(160)));
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() =>
+        {
+            if (_hasClosed) return;
+            UpdateLayout();
+            FollowScrcpyWindow();
+        }));
+        return Task.CompletedTask;
+    }
+
+    private void UpdateCollapseButton()
+    {
+        var icon = (Canvas)CreateIcon(Geometry.Parse(_isCollapsed
+            ? "M 7,15 L 12,10 L 17,15"
+            : "M 7,9 L 12,14 L 17,9"));
+        if (_isCollapsed && _recorder.HasPendingRecording)
+        {
+            var dot = new System.Windows.Shapes.Ellipse { Width = 5, Height = 5, IsHitTestVisible = false };
+            dot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "RecordActiveBrush");
+            Canvas.SetLeft(dot, 18);
+            Canvas.SetTop(dot, 2);
+            icon.Children.Add(dot);
+        }
+        _collapseButton.Content = icon;
+        SetHint(_collapseButton, _isCollapsed
+            ? _recorder.HasPendingRecording ? "展开工具栏（录屏中）" : "展开工具栏"
+            : "收起工具栏");
     }
 
     private void Handle_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -216,23 +309,63 @@ public sealed class FloatingToolbarWindow : Window
         e.Handled = true;
     }
 
+    private Task TogglePinAsync()
+    {
+        var handle = GetScrcpyHandle();
+        if (handle == IntPtr.Zero)
+        {
+            GlassDialog.Message(this, "无法置顶", "投屏窗口尚未就绪，请稍后重试。");
+            return Task.CompletedTask;
+        }
+
+        var pin = !_pinEnabled;
+        if (!Native.SetWindowPos(handle, pin ? new IntPtr(-1) : new IntPtr(-2), 0, 0, 0, 0,
+            Native.SwpNoMove | Native.SwpNoSize | Native.SwpNoActivate))
+        {
+            GlassDialog.Message(this, "置顶失败", "无法更改投屏窗口的置顶状态。", true);
+            return Task.CompletedTask;
+        }
+
+        _pinEnabled = pin;
+        var label = pin ? "取消投屏窗口置顶" : "置顶投屏窗口";
+        SetHint(_pinButton, label);
+        if (pin)
+        {
+            _pinButton.SetResourceReference(Control.BackgroundProperty, "AccentLightBrush");
+            _pinButton.SetResourceReference(Control.BorderBrushProperty, "AccentBrush");
+        }
+        else
+        {
+            _pinButton.ClearValue(Control.BackgroundProperty);
+            _pinButton.ClearValue(Control.BorderBrushProperty);
+        }
+        return Task.CompletedTask;
+    }
+
     private async Task RunKeyAsync(string key)
     {
         try { await _adb.RunAsync(["-s", _device.Serial, "shell", "input", "keyevent", key]); } catch { }
     }
 
-    private async Task CaptureAsync()
+    private async Task CaptureAsync(bool original)
     {
+        if (!_captureButton.IsEnabled) return;
+        _captureButton.IsEnabled = false;
+        SetHint(_captureButton, "正在保存截图…");
         try
         {
-            var bytes = await _adb.CapturePngAsync(_device.Serial);
-            var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Android投屏助手");
-            Directory.CreateDirectory(folder);
-            var file = Path.Combine(folder, $"{Sanitize(_device.DisplayName)}-{DateTime.Now:yyyyMMdd-HHmmss}.png");
-            await File.WriteAllBytesAsync(file, bytes);
-            GlassDialog.Message(this, "截图完成", $"截图已保存：\n{file}");
+            var folder = MediaStorage.GetFolder();
+            var file = Path.Combine(folder, $"{Sanitize(_device.DisplayName)}-{DateTime.Now:yyyyMMdd-HHmmss-fff}.png");
+            var fast = !original && await ProjectionCaptureService.TryCaptureAsync(_scrcpyProcess, file);
+            if (!fast) await _adb.CapturePngToFileAsync(_device.Serial, file);
+            ShowNotice($"{(fast ? "快速截图" : "原画截图")}已保存到：\n{folder}");
         }
         catch (Exception ex) { GlassDialog.Message(this, "截图失败", ex.Message, true); }
+        finally
+        {
+            _captureButton.IsEnabled = true;
+            SetHint(_captureButton, "快速截图（右键保存原画）");
+        }
     }
 
     private async Task ToggleRecordingAsync()
@@ -243,16 +376,12 @@ public sealed class FloatingToolbarWindow : Window
         {
             if (_recorder.HasPendingRecording)
             {
+                SetHint(_recordButton, "正在保存录屏，请稍候…");
+                ShowNotice("正在封装并传输录屏，请稍候…");
                 var file = await _recorder.StopAsync();
                 SetRecordingState(false);
                 if (!string.IsNullOrWhiteSpace(file))
-                {
-                    var size = new FileInfo(file).Length;
-                    if (GlassDialog.Choice(this, "录屏完成", $"录屏已保存（{size / 1024.0 / 1024.0:F1} MB）：\n{file}", "打开文件夹"))
-                    {
-                        Process.Start(new ProcessStartInfo { FileName = Path.GetDirectoryName(file)!, UseShellExecute = true });
-                    }
-                }
+                    ShowNotice($"录屏已保存到：\n{Path.GetDirectoryName(file)}");
                 return;
             }
 
@@ -274,9 +403,35 @@ public sealed class FloatingToolbarWindow : Window
     private void SetRecordingState(bool recording)
     {
         _recordButton.Content = recording
-            ? CreateIcon(new RectangleGeometry(new Rect(6.5, 6.5, 11, 11), 2.6, 2.6), true)
-            : CreateIcon(new EllipseGeometry(new Point(12, 12), 5.7, 5.7), true);
-        _recordButton.ToolTip = recording ? "结束录屏并保存" : "开始录屏";
+            ? CreateIcon(new RectangleGeometry(new Rect(3.75, 3.75, 16.5, 16.5), 3.9, 3.9), true, "RecordActiveBrush")
+            : CreateIcon(new EllipseGeometry(new Point(12, 12), 8.55, 8.55), true);
+        SetHint(_recordButton, recording ? "结束录屏并保存" : "开始录屏");
+        UpdateCollapseButton();
+    }
+
+    public bool AttachToProjectionWindow()
+    {
+        var handle = GetScrcpyHandle();
+        if (handle == IntPtr.Zero) return false;
+        new WindowInteropHelper(this).Owner = handle;
+        return true;
+    }
+
+    public Task CloseForShutdownAsync() => _shutdownTask ??= CloseForShutdownCoreAsync();
+
+    private async Task CloseForShutdownCoreAsync()
+    {
+        if (_recordingCloseTask is not null) await _recordingCloseTask;
+        else if (_recorder.HasPendingRecording)
+        {
+            try { await _recorder.StopAsync(); }
+            catch (Exception ex)
+            {
+                GlassDialog.Message(this, "录屏未保存", $"投屏即将结束，录屏文件未能安全导出：\n{ex.Message}", true);
+            }
+        }
+        _forceClose = true;
+        if (!_hasClosed) Close();
     }
 
     private void FollowScrcpyWindow()
@@ -286,11 +441,10 @@ public sealed class FloatingToolbarWindow : Window
             UpdateSnapPreview();
             return;
         }
-        if (_isSnapping) return;
         var handle = GetScrcpyHandle();
         if (handle == IntPtr.Zero) return;
         TrackScrcpyWindow(handle);
-        if (_mainWindow.WindowState == WindowState.Minimized || Native.IsIconic(handle))
+        if (Native.IsIconic(handle) || !Native.IsWindowVisible(handle))
         {
             if (IsVisible)
             {
@@ -304,10 +458,9 @@ public sealed class FloatingToolbarWindow : Window
             _hiddenForMinimize = false;
             Show();
         }
+        if (_isSnapping) return;
         if (_isDocked && Native.GetDockWindowRect(handle, out var rect)) ApplyDockPosition(rect);
     }
-
-    private void MainWindow_StateChanged(object? sender, EventArgs e) => FollowScrcpyWindow();
 
     private void TrackScrcpyWindow(IntPtr handle)
     {
@@ -353,7 +506,7 @@ public sealed class FloatingToolbarWindow : Window
         if (!TryGetDockSide(rect, visibleRect, out var side))
         {
             _isDocked = false;
-            _shell.BorderBrush = new SolidColorBrush(NeutralBorder);
+            _shell.BorderBrush = new SolidColorBrush(ThemeManager.ToolbarNeutralBorder);
             return;
         }
 
@@ -366,7 +519,7 @@ public sealed class FloatingToolbarWindow : Window
         _snapFromTop = outerRect.Top;
         _snapToLeft = target.Left;
         _snapToTop = target.Top;
-        _shell.BorderBrush = new SolidColorBrush(SnapBorder);
+        _shell.BorderBrush = new SolidColorBrush(ThemeManager.ToolbarSnapBorder);
         _snapWatch.Restart();
         _isSnapping = true;
         _snapTimer.Start();
@@ -421,7 +574,7 @@ public sealed class FloatingToolbarWindow : Window
             && Native.GetDockWindowRect(scrcpyHandle, out var scrcpyRect)
             && Native.GetVisibleWindowRect(toolbarHandle, out var toolbarRect)
             && TryGetDockSide(scrcpyRect, toolbarRect, out _);
-        _shell.BorderBrush = new SolidColorBrush(nearby ? SnapBorder : NeutralBorder);
+        _shell.BorderBrush = new SolidColorBrush(nearby ? ThemeManager.ToolbarSnapBorder : ThemeManager.ToolbarNeutralBorder);
     }
 
     private void AdvanceSnapAnimation()
@@ -434,9 +587,9 @@ public sealed class FloatingToolbarWindow : Window
         if (progress < 1) return;
         _snapTimer.Stop();
         _isSnapping = false;
-        var brush = new SolidColorBrush(SnapBorder);
+        var brush = new SolidColorBrush(ThemeManager.ToolbarSnapBorder);
         _shell.BorderBrush = brush;
-        brush.BeginAnimation(SolidColorBrush.ColorProperty, new ColorAnimation(DockedBorder, TimeSpan.FromMilliseconds(350)));
+        brush.BeginAnimation(SolidColorBrush.ColorProperty, new ColorAnimation(ThemeManager.ToolbarDockedBorder, TimeSpan.FromMilliseconds(350)));
         FollowScrcpyWindow();
     }
 
@@ -448,21 +601,37 @@ public sealed class FloatingToolbarWindow : Window
         {
             if (!_scrcpyProcess.HasExited)
             {
+                var named = Native.FindWindow(null, _scrcpyTitle);
+                if (named != IntPtr.Zero)
+                {
+                    Native.GetWindowThreadProcessId(named, out var processId);
+                    if (processId == _scrcpyProcess.Id) return named;
+                }
                 _scrcpyProcess.Refresh();
                 if (_scrcpyProcess.MainWindowHandle != IntPtr.Zero) return _scrcpyProcess.MainWindowHandle;
             }
         }
         catch { }
-        return Native.FindWindow(null, _scrcpyTitle);
+        return IntPtr.Zero;
     }
 
     protected override void OnClosing(CancelEventArgs e)
     {
+        if (_forceClose)
+        {
+            base.OnClosing(e);
+            return;
+        }
+        if (_closing && _recorder.HasPendingRecording)
+        {
+            e.Cancel = true;
+            return;
+        }
         if (!_closing && _recorder.HasPendingRecording)
         {
             e.Cancel = true;
             _closing = true;
-            _ = CloseAfterRecordingAsync();
+            _recordingCloseTask = CloseAfterRecordingAsync();
             return;
         }
         base.OnClosing(e);
@@ -480,6 +649,7 @@ public sealed class FloatingToolbarWindow : Window
         catch (Exception ex)
         {
             _closing = false;
+            _recordingCloseTask = null;
             GlassDialog.Message(this, "录屏失败", $"录屏尚未安全保存，快捷栏会保留供重试：\n{ex.Message}", true);
         }
     }
@@ -497,15 +667,20 @@ public sealed class FloatingToolbarWindow : Window
         public const uint EventSystemMinimizeEnd = 0x0017;
         public const uint WinEventOutOfContext = 0x0000;
         public const uint WinEventSkipOwnProcess = 0x0002;
+        public const uint SwpNoSize = 0x0001;
+        public const uint SwpNoMove = 0x0002;
+        public const uint SwpNoActivate = 0x0010;
         private const int ExtendedFrameBounds = 9;
 
         public delegate void WinEventProc(IntPtr hook, uint eventType, IntPtr hwnd, int objectId, int childId, uint eventThread, uint eventTime);
 
         [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern IntPtr FindWindow(string? className, string? windowName);
         [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out Rect rect);
+        [DllImport("user32.dll", SetLastError = true)] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr after, int x, int y, int width, int height, uint flags);
         [DllImport("user32.dll")] private static extern bool GetClientRect(IntPtr hWnd, out Rect rect);
         [DllImport("user32.dll")] private static extern bool ClientToScreen(IntPtr hWnd, ref Point point);
         [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr hWnd);
+        [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hWnd);
         [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
         [DllImport("user32.dll")] public static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr module,
             WinEventProc callback, uint processId, uint threadId, uint flags);

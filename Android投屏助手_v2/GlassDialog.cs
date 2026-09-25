@@ -38,8 +38,8 @@ internal static class GlassDialog
             Width = 42,
             Height = 42,
             VerticalAlignment = VerticalAlignment.Top,
-            Background = new SolidColorBrush(caution ? Color.FromRgb(229, 240, 255) : Color.FromRgb(226, 240, 255)),
-            BorderBrush = Brushes.White,
+            Background = (Brush)Application.Current.FindResource("DialogBadgeBrush"),
+            BorderBrush = (Brush)Application.Current.FindResource("DialogBadgeBorderBrush"),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(21),
             Child = new TextBlock
@@ -48,7 +48,7 @@ internal static class GlassDialog
                 FontFamily = new FontFamily("Segoe UI Variable"),
                 FontWeight = FontWeights.SemiBold,
                 FontSize = 22,
-                Foreground = new SolidColorBrush(caution ? Color.FromRgb(51, 112, 214) : Color.FromRgb(40, 110, 217)),
+                Foreground = (Brush)Application.Current.FindResource("AccentBrush"),
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center
             }
@@ -82,7 +82,7 @@ internal static class GlassDialog
             Height = 40,
             IsDefault = true,
             Margin = new Thickness(0),
-            Background = (Brush)Application.Current.FindResource("AccentBrush"),
+            Background = (Brush)Application.Current.FindResource("ActionBrush"),
             Foreground = Brushes.White,
             BorderBrush = Brushes.Transparent
         };
@@ -116,7 +116,7 @@ internal static class GlassDialog
             ResizeMode = ResizeMode.NoResize,
             WindowStyle = WindowStyle.None,
             AllowsTransparency = false,
-            Background = (Brush)Application.Current.FindResource("WindowBrush"),
+            Background = (Brush)Application.Current.FindResource("PanelStrongBrush"),
             WindowStartupLocation = owner?.IsVisible == true ? WindowStartupLocation.CenterOwner : WindowStartupLocation.CenterScreen,
             ShowInTaskbar = false,
             Topmost = owner?.Topmost == true,
@@ -132,10 +132,9 @@ internal static class GlassDialog
     {
         var root = new Border
         {
-            Margin = new Thickness(5),
+            Margin = new Thickness(0),
             CornerRadius = new CornerRadius(24),
-            BorderThickness = new Thickness(1),
-            BorderBrush = Brushes.White,
+            BorderThickness = new Thickness(0),
             Background = (Brush)Application.Current.FindResource("PanelStrongBrush")
         };
         root.RenderTransformOrigin = new Point(0.5, 0.5);

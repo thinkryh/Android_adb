@@ -9,9 +9,13 @@
     <RootNamespace>Android投屏助手</RootNamespace>
     <Platforms>AnyCPU</Platforms>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="QRCoder" Version="1.6.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Assets\AppIcon.png" />
   </ItemGroup>
   <ItemGroup>
     <ScrcpyFiles Include="..\scrcpy\**\*" />

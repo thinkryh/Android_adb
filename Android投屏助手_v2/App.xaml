@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <LinearGradientBrush x:Key="WindowBrush" StartPoint="0,0" EndPoint="1,1">
             <GradientStop Color="#F8FBFF" Offset="0" />
             <GradientStop Color="#E7F1FB" Offset="0.56" />
@@ -24,23 +25,38 @@
         <SolidColorBrush x:Key="TextBrush" Color="#1D2938" />
         <SolidColorBrush x:Key="MutedTextBrush" Color="#68798B" />
         <SolidColorBrush x:Key="AccentBrush" Color="#2770E8" />
+        <SolidColorBrush x:Key="ActionBrush" Color="#2770E8" />
         <SolidColorBrush x:Key="AccentLightBrush" Color="#DCEBFF" />
         <SolidColorBrush x:Key="DangerBrush" Color="#DC4D64" />
         <SolidColorBrush x:Key="BorderBrush" Color="#EFFFFFFF" />
+        <SolidColorBrush x:Key="ButtonBorderBrush" Color="#B8FFFFFF" />
+        <SolidColorBrush x:Key="ButtonHoverBrush" Color="#45FFFFFF" />
+        <SolidColorBrush x:Key="ToolbarButtonBrush" Color="#84FFFFFF" />
+        <SolidColorBrush x:Key="ToolbarButtonBorderBrush" Color="#D2FFFFFF" />
+        <SolidColorBrush x:Key="ToolbarBorderBrush" Color="#E0EDFB" />
+        <SolidColorBrush x:Key="ToolbarIconBrush" Color="#2A4C74" />
+        <SolidColorBrush x:Key="RecordBrush" Color="#B56F79" />
+        <SolidColorBrush x:Key="RecordActiveBrush" Color="#D25268" />
+        <SolidColorBrush x:Key="TextBoxBrush" Color="#ECFFFFFF" />
+        <SolidColorBrush x:Key="TextBoxBorderBrush" Color="#A9C8DEEF" />
+        <SolidColorBrush x:Key="StopButtonBrush" Color="#FFF0F1F3" />
+        <SolidColorBrush x:Key="HeaderIconBrush" Color="#0B1410" />
+        <SolidColorBrush x:Key="DialogBadgeBrush" Color="#E5F0FF" />
+        <SolidColorBrush x:Key="DialogBadgeBorderBrush" Color="#FFFFFFFF" />
         <Style TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
             <Setter Property="FontFamily" Value="Segoe UI Variable,Microsoft YaHei UI" />
         </Style>
         <Style TargetType="Button">
             <Setter Property="FontFamily" Value="Segoe UI Variable,Microsoft YaHei UI" />
-            <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
             <Setter Property="Padding" Value="14,8" />
             <Setter Property="Margin" Value="0,0,8,0" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
-            <Setter Property="Background" Value="{StaticResource PanelStrongBrush}" />
-            <Setter Property="BorderBrush" Value="#B8FFFFFF" />
+            <Setter Property="Background" Value="{DynamicResource PanelStrongBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ButtonBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Template">
                 <Setter.Value>
@@ -50,7 +66,7 @@
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="14" SnapsToDevicePixels="True">
                             <Grid>
-                                <Border x:Name="HoverLight" CornerRadius="13" Background="#45FFFFFF" Opacity="0" />
+                                <Border x:Name="HoverLight" CornerRadius="13" Background="{DynamicResource ButtonHoverBrush}" Opacity="0" />
                                 <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                                   VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                                   Margin="{TemplateBinding Padding}" RecognizesAccessKey="True" />
@@ -66,21 +82,22 @@
             </Setter>
         </Style>
         <Style x:Key="ToolbarButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="Width" Value="48" />
-            <Setter Property="Height" Value="48" />
+            <Setter Property="Width" Value="44" />
+            <Setter Property="Height" Value="44" />
             <Setter Property="Padding" Value="0" />
             <Setter Property="Margin" Value="0,0,0,3" />
-            <Setter Property="Background" Value="#84FFFFFF" />
-            <Setter Property="BorderBrush" Value="#D2FFFFFF" />
+            <Setter Property="Background" Value="{DynamicResource ToolbarButtonBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ToolbarButtonBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
         <Style TargetType="TextBox">
             <Setter Property="FontFamily" Value="Segoe UI Variable,Microsoft YaHei UI" />
-            <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
-            <Setter Property="Background" Value="#ECFFFFFF" />
-            <Setter Property="BorderBrush" Value="#A9C8DEEF" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="Background" Value="{DynamicResource TextBoxBrush}" />
+            <Setter Property="CaretBrush" Value="{DynamicResource TextBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource TextBoxBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="10,7" />
             <Setter Property="Template">
@@ -93,6 +110,20 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+        </Style>
+        <Style TargetType="ListBox">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="Background" Value="{DynamicResource TextBoxBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource TextBoxBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        <Style TargetType="ToolTip">
+            <Setter Property="Background" Value="{DynamicResource PanelStrongBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ToolbarButtonBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="11,7" />
+            <Setter Property="MaxWidth" Value="260" />
         </Style>
     </Application.Resources>
 </Application>

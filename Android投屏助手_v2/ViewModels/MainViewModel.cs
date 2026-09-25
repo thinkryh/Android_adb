@@ -17,12 +17,34 @@ public sealed class DeviceViewModel : ObservableObject
         _status = device.Status;
         _displayName = device.DisplayName;
     }
-    public AdbDevice Device { get; }
+    public AdbDevice Device { get; private set; }
     public string Serial => Device.Serial;
     public string ConnectionLabel => Device.ConnectionLabel;
     public string SystemLabel => Device.Device ?? "正在读取设备信息";
     public string DisplayName { get => _displayName; set => SetProperty(ref _displayName, value); }
-    public DeviceStatus Status { get => _status; set { if (SetProperty(ref _status, value)) OnPropertyChanged(nameof(StatusLabel)); } }
+    public DeviceStatus Status
+    {
+        get => _status;
+        set
+        {
+            if (!SetProperty(ref _status, value)) return;
+            OnPropertyChanged(nameof(StatusLabel));
+            OnPropertyChanged(nameof(IsMirroring));
+            OnPropertyChanged(nameof(IsNotMirroring));
+            OnPropertyChanged(nameof(CanStartMirror));
+        }
+    }
+    public bool IsMirroring => Status == DeviceStatus.Mirroring;
+    public bool IsNotMirroring => !IsMirroring;
+    public bool CanStartMirror => Status is DeviceStatus.Online or DeviceStatus.Failed;
+    public void UpdateDevice(AdbDevice device, bool mirroring)
+    {
+        Device = device;
+        OnPropertyChanged(nameof(ConnectionLabel));
+        OnPropertyChanged(nameof(SystemLabel));
+        if (mirroring) Status = DeviceStatus.Mirroring;
+        else if (Status != DeviceStatus.Connecting) Status = device.Status;
+    }
     public string StatusLabel => Status switch
     {
         DeviceStatus.Online => "已连接",
@@ -86,9 +108,21 @@ public sealed class MainViewModel : ObservableObject
                 Devices.Clear();
                 foreach (var device in devices)
                 {
-                    var item = new DeviceViewModel(device);
-                    if (oldBySerial.TryGetValue(device.Serial, out var old)) item.DisplayName = old.DisplayName;
+                    DeviceViewModel item;
+                    if (oldBySerial.TryGetValue(device.Serial, out var old))
+                    {
+                        old.UpdateDevice(device, _scrcpy.IsRunning(device.Serial));
+                        item = old;
+                    }
+                    else item = new DeviceViewModel(device);
                     Devices.Add(item);
+                }
+                foreach (var old in oldBySerial.Values)
+                {
+                    if (Devices.Any(x => x.Serial.Equals(old.Serial, StringComparison.OrdinalIgnoreCase))
+                        || !_scrcpy.IsRunning(old.Serial)) continue;
+                    old.Status = DeviceStatus.Mirroring;
+                    Devices.Add(old);
                 }
             });
             StatusText = Devices.Count == 0 ? "没有检测到设备，请连接 USB 或添加无线设备。" : $"已发现 {Devices.Count} 台设备。";

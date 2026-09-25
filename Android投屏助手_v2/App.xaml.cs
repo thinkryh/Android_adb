@@ -8,7 +8,11 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+#if DEBUG
+        _mutex = new Mutex(true, "Android投屏助手-v2-debug", out var created);
+#else
         _mutex = new Mutex(true, "Android投屏助手-v2", out var created);
+#endif
         if (!created)
         {
             GlassDialog.Message(null, "Android投屏助手", "助手已经在运行，请切回现有窗口。");
@@ -16,6 +20,7 @@ public partial class App : Application
             return;
         }
 
+        ThemeManager.Initialize();
         base.OnStartup(e);
     }
 }

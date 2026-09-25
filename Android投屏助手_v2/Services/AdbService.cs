@@ -130,7 +130,7 @@ public sealed class AdbService
         return list;
     }
 
-    public async Task<byte[]> CapturePngAsync(string serial, CancellationToken cancellationToken = default)
+    public async Task CapturePngToFileAsync(string serial, string destinationPath, CancellationToken cancellationToken = default)
     {
         if (!Exists) throw new FileNotFoundException("找不到 adb.exe。", _adbPath);
         using var process = new Process
@@ -147,11 +147,25 @@ public sealed class AdbService
         };
         foreach (var arg in new[] { "-s", serial, "exec-out", "screencap", "-p" }) process.StartInfo.ArgumentList.Add(arg);
         if (!process.Start()) throw new InvalidOperationException("无法启动截图命令。");
-        await using var stream = new MemoryStream();
-        await process.StandardOutput.BaseStream.CopyToAsync(stream, cancellationToken);
-        await process.WaitForExitAsync(cancellationToken);
-        if (process.ExitCode != 0 || stream.Length == 0) throw new InvalidOperationException("截图失败，请检查设备连接。");
-        return stream.ToArray();
+        var temporaryPath = destinationPath + ".partial";
+        try
+        {
+            var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
+            await using (var file = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None,
+                128 * 1024, FileOptions.Asynchronous))
+                await process.StandardOutput.BaseStream.CopyToAsync(file, cancellationToken);
+            await process.WaitForExitAsync(cancellationToken);
+            var error = await errorTask;
+            if (process.ExitCode != 0 || new FileInfo(temporaryPath).Length < 8)
+                throw new InvalidOperationException(string.IsNullOrWhiteSpace(error) ? "截图失败，请检查设备连接。" : error.Trim());
+            File.Move(temporaryPath, destinationPath);
+        }
+        catch
+        {
+            try { if (!process.HasExited) process.Kill(); } catch { }
+            try { File.Delete(temporaryPath); } catch { }
+            throw;
+        }
     }
 
     public static void ValidateEndpoint(string endpoint, string fieldName)

@@ -17,6 +17,9 @@ public partial class MainWindow : Window
     private readonly MainViewModel _viewModel;
     private readonly ScrcpyService _scrcpy;
     private readonly DispatcherTimer _deviceTimer;
+    private readonly Dictionary<string, FloatingToolbarWindow> _toolbars = new(StringComparer.OrdinalIgnoreCase);
+    private bool _exitInProgress;
+    private bool _exitApproved;
 
     public MainWindow()
     {
@@ -28,6 +31,7 @@ public partial class MainWindow : Window
         _scrcpy = new ScrcpyService(System.IO.Path.Combine(scrcpyRoot, "scrcpy.exe"), adb.Path);
         _viewModel = new MainViewModel(adb, _scrcpy, new SettingsService());
         DataContext = _viewModel;
+        ThemeButton.Content = ThemeManager.IsDark ? "浅色模式" : "黑夜模式";
         _deviceTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
         _deviceTimer.Tick += async (_, _) =>
         {
@@ -43,7 +47,7 @@ public partial class MainWindow : Window
             return;
         }
         await _viewModel.RefreshAsync();
-        _deviceTimer.Start();
+        if (!_exitInProgress && !_exitApproved) _deviceTimer.Start();
     }
 
     private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -52,15 +56,34 @@ public partial class MainWindow : Window
     }
 
     private async void Refresh_Click(object sender, RoutedEventArgs e) => await _viewModel.RefreshAsync();
+    private void Theme_Click(object sender, RoutedEventArgs e)
+    {
+        ThemeManager.SetDark(!ThemeManager.IsDark);
+        ThemeButton.Content = ThemeManager.IsDark ? "浅色模式" : "黑夜模式";
+    }
     private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
-    private void Window_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
+    private async void Window_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
+        if (_exitApproved) return;
+        e.Cancel = true;
+        if (_exitInProgress) return;
+        if (!GlassDialog.Confirm(this, "退出助手", "关闭助手将结束所有投屏和快捷栏；正在录制的视频会先尝试保存。\n确定要退出吗？", "结束并退出", "继续使用")) return;
+        _exitInProgress = true;
         _deviceTimer.Stop();
-        if (!GlassDialog.Confirm(this, "退出助手", "关闭主界面后，已打开的投屏窗口仍会继续运行。\n确定要退出主界面吗？", "退出主界面", "继续使用"))
+        try
         {
-            e.Cancel = true;
+            foreach (var toolbar in _toolbars.Values.ToArray()) await toolbar.CloseForShutdownAsync();
+            _scrcpy.StopAll();
+            _exitApproved = true;
+            await Dispatcher.Yield(System.Windows.Threading.DispatcherPriority.Background);
+            Close();
+        }
+        catch (Exception ex)
+        {
+            _exitInProgress = false;
             if (IsLoaded) _deviceTimer.Start();
+            GlassDialog.Message(this, "退出未完成", $"仍有投屏进程未能结束，请重试：\n{ex.Message}", true);
         }
     }
 
@@ -100,7 +123,7 @@ public partial class MainWindow : Window
         var bytes = qrCode.GetGraphic(8);
         var image = new Image { Source = ToBitmap(bytes), Width = 300, Height = 300, Margin = new Thickness(0, 12, 0, 8) };
         var start = new Button { Content = "我已扫码，开始查找", Padding = new Thickness(16, 8, 16, 8), HorizontalAlignment = HorizontalAlignment.Center };
-        var status = new TextBlock { Text = "手机：设置 → 开发者选项 → 无线调试 → 使用二维码配对", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(25, 0, 25, 12), Foreground = Brushes.DimGray };
+        var status = new TextBlock { Text = "手机：设置 → 开发者选项 → 无线调试 → 使用二维码配对", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(25, 0, 25, 12), Foreground = (Brush)Application.Current.FindResource("MutedTextBrush") };
         var panel = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
         using var pairingCancellation = new CancellationTokenSource();
         panel.Children.Add(new TextBlock { Text = "请使用手机无线调试页面扫描", FontSize = 16, FontWeight = FontWeights.SemiBold, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 18, 0, 0) });
@@ -146,25 +169,59 @@ public partial class MainWindow : Window
 
     private async void StartMirror_Click(object sender, RoutedEventArgs e)
     {
+        if (_exitInProgress) return;
         if ((sender as Button)?.Tag is not DeviceViewModel item) return;
-        if (item.Status == DeviceStatus.Mirroring) return;
+        if (item.Status is DeviceStatus.Mirroring or DeviceStatus.Connecting) return;
         try
         {
             var process = await _viewModel.StartMirrorAsync(item);
-            var toolbar = new FloatingToolbarWindow(item, _viewModel.Adb, process, this, $"Android投屏助手 - {item.DisplayName}");
-            process.Exited += (_, _) => Dispatcher.Invoke(() =>
+            var toolbar = new FloatingToolbarWindow(item, _viewModel.Adb, process, $"Android投屏助手 - {item.DisplayName}");
+            var attached = false;
+            for (var attempt = 0; attempt < 25; attempt++)
+            {
+                if (toolbar.AttachToProjectionWindow()) { attached = true; break; }
+                if (process.HasExited) break;
+                await Task.Delay(100);
+            }
+            if (!attached)
             {
                 toolbar.Close();
-                item.Status = DeviceStatus.Online;
-            });
+                _viewModel.StopMirror(item);
+                throw new InvalidOperationException("投屏窗口未能创建，快捷栏无法绑定到投屏窗口。");
+            }
+            _toolbars[item.Serial] = toolbar;
+            toolbar.Closed += (_, _) =>
+            {
+                if (_toolbars.TryGetValue(item.Serial, out var current) && ReferenceEquals(current, toolbar))
+                    _toolbars.Remove(item.Serial);
+            };
+            process.Exited += (_, _) =>
+            {
+                if (Dispatcher.HasShutdownStarted) return;
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (!_exitInProgress && _toolbars.TryGetValue(item.Serial, out var current) && ReferenceEquals(current, toolbar))
+                        toolbar.Close();
+                    item.Status = DeviceStatus.Online;
+                }));
+            };
             toolbar.Show();
+            if (process.HasExited) toolbar.Close();
         }
         catch (Exception ex) { GlassDialog.Message(this, "投屏启动失败", ex.Message, true); }
     }
 
-    private void StopMirror_Click(object sender, RoutedEventArgs e)
+    private async void StopMirror_Click(object sender, RoutedEventArgs e)
     {
-        if ((sender as Button)?.Tag is DeviceViewModel item) _viewModel.StopMirror(item);
+        if (_exitInProgress) return;
+        if ((sender as Button)?.Tag is not DeviceViewModel item) return;
+        if (item.Status != DeviceStatus.Mirroring) return;
+        try
+        {
+            if (_toolbars.TryGetValue(item.Serial, out var toolbar)) await toolbar.CloseForShutdownAsync();
+            _viewModel.StopMirror(item);
+        }
+        catch (Exception ex) { GlassDialog.Message(this, "结束投屏失败", ex.Message, true); }
     }
 
     private static string FindBundleRoot()
