@@ -25,6 +25,7 @@
         <SolidColorBrush x:Key="TextBrush" Color="#1D2938" />
         <SolidColorBrush x:Key="MutedTextBrush" Color="#68798B" />
         <SolidColorBrush x:Key="AccentBrush" Color="#2770E8" />
+        <SolidColorBrush x:Key="ConnectionOnlineBrush" Color="#188A64" />
         <SolidColorBrush x:Key="ActionBrush" Color="#2770E8" />
         <SolidColorBrush x:Key="AccentLightBrush" Color="#DCEBFF" />
         <SolidColorBrush x:Key="DangerBrush" Color="#DC4D64" />

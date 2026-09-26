@@ -6,10 +6,10 @@
         mc:Ignorable="d"
         Title="Android投屏助手"
         Icon="Assets/AppIcon.png"
-        Width="560"
-        Height="326"
-        MinWidth="520"
-        MinHeight="326"
+        Width="608"
+        Height="467"
+        MinWidth="580"
+        MinHeight="430"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         AllowsTransparency="False"
@@ -27,63 +27,70 @@
             CornerRadius="28">
         <Grid>
             <Grid.RowDefinitions>
-                <RowDefinition Height="60" />
+                <RowDefinition Height="76" />
                 <RowDefinition Height="*" />
-                <RowDefinition Height="36" />
+                <RowDefinition Height="84" />
             </Grid.RowDefinitions>
 
-            <Border Grid.Row="0" Margin="12,8,12,0" Background="{DynamicResource PanelBrush}"
-                    BorderThickness="0" CornerRadius="18" IsHitTestVisible="False" />
-            <Grid Grid.Row="0" MouseLeftButtonDown="Header_MouseLeftButtonDown">
+            <Grid Grid.Row="0" Margin="24,0,24,0" MouseLeftButtonDown="Header_MouseLeftButtonDown">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <StackPanel Orientation="Horizontal" Margin="26,0,0,0" VerticalAlignment="Center">
+                <Border Grid.ColumnSpan="2" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" VerticalAlignment="Bottom" />
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <Border Width="36" Height="36" CornerRadius="11" Background="{DynamicResource HeaderIconBrush}" Margin="0,0,10,0">
                         <Image Source="Assets/AppIcon.png" Width="34" Height="24" Stretch="Uniform" VerticalAlignment="Center" />
                     </Border>
-                    <TextBlock Text="Android 投屏助手" FontSize="21" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <TextBlock Text="Android 投屏助手" FontSize="19" FontWeight="SemiBold" VerticalAlignment="Center" />
                 </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0">
-                    <Button Content="刷新" Click="Refresh_Click" Height="32" Padding="12,0" Background="{DynamicResource PanelStrongBrush}" BorderThickness="0" />
-                    <Button Content="—" Width="32" Height="32" Padding="0" Click="Minimize_Click" Background="Transparent" BorderThickness="0" FontSize="16" />
-                    <Button Content="×" Width="32" Height="32" Padding="0" Click="Close_Click" Background="Transparent" BorderThickness="0" FontSize="20" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="WirelessButton" Click="WirelessButton_Click" Width="120" Height="36" Padding="8,0" Margin="0,0,7,0"
+                            Background="{DynamicResource ActionBrush}" Foreground="White" BorderThickness="0"
+                            ToolTip="选择无线连接方式" AutomationProperties.Name="无线连接">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <TextBlock Text="无线连接" FontSize="14" Foreground="White" VerticalAlignment="Center" />
+                            <Path Data="M 0,0 L 4,4 L 8,0" Stroke="White" StrokeThickness="1.6" Margin="9,2,0,0" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button Content="刷新" Click="Refresh_Click" Width="58" Height="36" Padding="0" Margin="0,0,4,0"
+                            Background="{DynamicResource PanelStrongBrush}" BorderThickness="0" />
+                    <Button Content="—" Width="28" Height="32" Padding="0" Margin="0" Click="Minimize_Click" Background="Transparent" BorderThickness="0" FontSize="16" />
+                    <Button Content="×" Width="28" Height="32" Padding="0" Margin="0" Click="Close_Click" Background="Transparent" BorderThickness="0" FontSize="20" />
                 </StackPanel>
             </Grid>
 
-            <Grid Grid.Row="1" Margin="18,2,18,0">
+            <Popup x:Name="WirelessPopup" PlacementTarget="{Binding ElementName=WirelessButton}" Placement="Bottom"
+                   StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" VerticalOffset="7">
+                <Border Width="208" Padding="8" CornerRadius="16" Background="{DynamicResource PanelStrongBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <Button Content="IP 直连" Click="AddWireless_Click" Height="38" Margin="0,0,0,3" Padding="12,0" HorizontalContentAlignment="Left" BorderThickness="0" />
+                        <Button Content="配对码" Click="PairCode_Click" Height="38" Margin="0,0,0,3" Padding="12,0" HorizontalContentAlignment="Left" BorderThickness="0" />
+                        <Button Content="扫码配对" Click="QrPair_Click" Height="38" Margin="0,0,0,3" Padding="12,0" HorizontalContentAlignment="Left" BorderThickness="0" />
+                        <Button Content="mDNS 发现" Click="Mdns_Click" Height="38" Margin="0" Padding="12,0" HorizontalContentAlignment="Left" BorderThickness="0" />
+                    </StackPanel>
+                </Border>
+            </Popup>
+
+            <Grid Grid.Row="1" Margin="24,13,24,0">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="60" />
-                    <RowDefinition Height="32" />
+                    <RowDefinition Height="54" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
-                <Grid Grid.Row="0" Margin="8,0,8,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="82" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="无线连接" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
-                    <UniformGrid Grid.Column="1" Columns="4" Rows="1" VerticalAlignment="Center">
-                        <Button Content="IP 直连" Click="AddWireless_Click" Height="34" Padding="0" Margin="0,0,5,0" Background="{DynamicResource AccentLightBrush}" BorderThickness="0" />
-                        <Button Content="配对码" Click="PairCode_Click" Height="34" Padding="0" Margin="0,0,5,0" BorderThickness="0" />
-                        <Button Content="扫码配对" Click="QrPair_Click" Height="34" Padding="0" Margin="0,0,5,0" BorderThickness="0" />
-                        <Button Content="mDNS 发现" Click="Mdns_Click" Height="34" Padding="0" BorderThickness="0" />
-                    </UniformGrid>
-                </Grid>
-                <Grid Grid.Row="1" Margin="8,0,8,0">
+                <Grid Grid.Row="0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="设备" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <TextBlock Text="设备" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center" />
                         <TextBlock Text="{Binding Devices.Count}" Foreground="{DynamicResource MutedTextBrush}" FontSize="12" VerticalAlignment="Center" Margin="10,0,0,0" />
                         <TextBlock Text=" 台" Foreground="{DynamicResource MutedTextBrush}" FontSize="12" VerticalAlignment="Center" />
                     </StackPanel>
                 </Grid>
 
-                <Grid Grid.Row="2">
+                <Grid Grid.Row="1">
                     <ScrollViewer>
                     <ScrollViewer.Style>
                         <Style TargetType="ScrollViewer">
@@ -113,7 +120,7 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Height="130" Margin="0,0,7,6" Padding="15,10"
+                                <Border Height="203" Margin="0,0,7,8" Padding="20,16"
                                         Background="{DynamicResource PanelStrongBrush}"
                                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                                         CornerRadius="18">
@@ -128,10 +135,33 @@
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="{Binding DisplayName}" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,8,0" />
-                                            <Border Grid.Column="1" Background="{DynamicResource AccentLightBrush}" CornerRadius="10" Padding="8,4">
-                                                <TextBlock Text="{Binding ConnectionLabel}" FontSize="11" />
-                                            </Border>
+                                            <TextBlock Text="{Binding DisplayName}" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,8,0" />
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Ellipse Width="7" Height="7" Margin="0,0,7,0" VerticalAlignment="Center">
+                                                    <Ellipse.Style>
+                                                        <Style TargetType="Ellipse">
+                                                            <Setter Property="Fill" Value="{DynamicResource ConnectionOnlineBrush}" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsConnected}" Value="False">
+                                                                    <Setter Property="Fill" Value="{DynamicResource MutedTextBrush}" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Ellipse.Style>
+                                                </Ellipse>
+                                                <TextBlock Text="{Binding ConnectionStatusLabel}" FontSize="12">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="{DynamicResource ConnectionOnlineBrush}" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsConnected}" Value="False">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </StackPanel>
                                         </Grid>
                                         <StackPanel Grid.Row="1" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding SystemLabel}" Foreground="{DynamicResource MutedTextBrush}" FontSize="12" />
@@ -142,10 +172,9 @@
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="{Binding Serial}" Foreground="{DynamicResource MutedTextBrush}" FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0" TextTrimming="CharacterEllipsis" />
-                                            <Button Grid.Column="1" Content="开始投屏" Tag="{Binding}" Click="StartMirror_Click" Width="88" Height="32" Padding="0" Margin="0" Background="{DynamicResource AccentLightBrush}" BorderThickness="0"
+                                            <Button Grid.Column="1" Content="开始投屏" Tag="{Binding}" Click="StartMirror_Click" Width="104" Height="36" Padding="0" Margin="0" Background="{DynamicResource AccentLightBrush}" BorderThickness="0"
                                                     IsEnabled="{Binding CanStartMirror}" Visibility="{Binding IsNotMirroring, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                            <Button Grid.Column="1" Content="结束" Tag="{Binding}" Click="StopMirror_Click" Width="88" Height="32" Padding="0" Background="{DynamicResource StopButtonBrush}" BorderThickness="0" Margin="0"
+                                            <Button Grid.Column="1" Content="结束投屏" Tag="{Binding}" Click="StopMirror_Click" Width="104" Height="36" Padding="0" Background="{DynamicResource StopButtonBrush}" BorderThickness="0" Margin="0"
                                                     Visibility="{Binding IsMirroring, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                         </Grid>
                                     </Grid>
@@ -154,7 +183,7 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                     </ScrollViewer>
-                    <Border Height="130" Margin="0,0,7,6" Background="{DynamicResource PanelStrongBrush}" CornerRadius="18" Padding="16">
+                    <Border Height="203" Margin="0,0,7,8" Background="{DynamicResource PanelStrongBrush}" CornerRadius="18" Padding="16">
                     <Border.Style>
                         <Style TargetType="Border">
                             <Setter Property="Visibility" Value="Collapsed" />
@@ -174,13 +203,14 @@
                 </Grid>
             </Grid>
 
-            <Grid Grid.Row="2" Margin="22,0,22,0">
+            <Grid Grid.Row="2" Margin="24,0,24,0">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" />
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button x:Name="ThemeButton" Content="浅色模式" Click="Theme_Click" Height="26" Padding="10,0" Margin="0,0,12,0" Background="{DynamicResource PanelStrongBrush}" BorderThickness="0" />
-                    <TextBlock Text="v2 预览" VerticalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" FontSize="11" />
-                </StackPanel>
+                <Border Grid.ColumnSpan="2" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" VerticalAlignment="Top" />
+                <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" Margin="0,0,12,0" FontSize="12" />
+                <Button x:Name="ThemeButton" Grid.Column="1" Click="Theme_Click" Width="40" Height="40" Padding="0" Margin="0" VerticalAlignment="Center"
+                        Background="{DynamicResource PanelStrongBrush}" BorderThickness="1" AutomationProperties.Name="切换颜色模式">
+                    <TextBlock x:Name="ThemeIcon" Text="☾" FontFamily="Segoe UI Symbol" FontSize="20" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                </Button>
             </Grid>
         </Grid>
     </Border>

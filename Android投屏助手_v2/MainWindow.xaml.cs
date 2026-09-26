@@ -33,7 +33,7 @@ public partial class MainWindow : Window
         _viewModel = new MainViewModel(adb, _scrcpy, new SettingsService());
         DataContext = _viewModel;
         _viewModel.Devices.CollectionChanged += (_, _) => QueueLayoutUpdate();
-        ThemeButton.Content = ThemeManager.IsDark ? "浅色模式" : "黑夜模式";
+        UpdateThemeButton();
         _deviceTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
         _deviceTimer.Tick += async (_, _) =>
         {
@@ -61,11 +61,17 @@ public partial class MainWindow : Window
         if (e.ButtonState == MouseButtonState.Pressed) DragMove();
     }
 
+    private void WirelessButton_Click(object sender, RoutedEventArgs e) => WirelessPopup.IsOpen = !WirelessPopup.IsOpen;
     private async void Refresh_Click(object sender, RoutedEventArgs e) => await _viewModel.RefreshAsync();
     private void Theme_Click(object sender, RoutedEventArgs e)
     {
         ThemeManager.SetDark(!ThemeManager.IsDark);
-        ThemeButton.Content = ThemeManager.IsDark ? "浅色模式" : "黑夜模式";
+        UpdateThemeButton();
+    }
+    private void UpdateThemeButton()
+    {
+        ThemeIcon.Text = ThemeManager.IsDark ? "☾" : "☀";
+        ThemeButton.ToolTip = ThemeManager.IsDark ? "黑夜模式已开启，点击切换为浅色模式" : "浅色模式已开启，点击切换为黑夜模式";
     }
     private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
@@ -95,6 +101,7 @@ public partial class MainWindow : Window
 
     private async void AddWireless_Click(object sender, RoutedEventArgs e)
     {
+        WirelessPopup.IsOpen = false;
         var address = Prompt("IP 直连", "请输入无线连接地址（例如 192.168.1.10:45915）：");
         if (!string.IsNullOrWhiteSpace(address) && !await _viewModel.ConnectIpAsync(address.Trim()))
             GlassDialog.Message(this, "无线连接失败", _viewModel.StatusText, true);
@@ -102,6 +109,7 @@ public partial class MainWindow : Window
 
     private async void PairCode_Click(object sender, RoutedEventArgs e)
     {
+        WirelessPopup.IsOpen = false;
         var values = ShowPairDialog();
         if (values is not null && !await _viewModel.PairCodeAsync(values.Value.PairAddress, values.Value.Code, values.Value.ConnectAddress))
             GlassDialog.Message(this, "无线配对失败", _viewModel.StatusText, true);
@@ -109,6 +117,7 @@ public partial class MainWindow : Window
 
     private async void Mdns_Click(object sender, RoutedEventArgs e)
     {
+        WirelessPopup.IsOpen = false;
         var services = await _viewModel.DiscoverMdnsAsync();
         var connect = services.Where(x => !x.IsPairing).ToList();
         if (connect.Count == 0)
@@ -123,6 +132,7 @@ public partial class MainWindow : Window
 
     private async void QrPair_Click(object sender, RoutedEventArgs e)
     {
+        WirelessPopup.IsOpen = false;
         var serviceName = "studio-" + Guid.NewGuid().ToString("N")[..10];
         var password = Random.Shared.NextInt64(1_000_000_000, 9_999_999_999).ToString();
         var payload = $"WIFI:T:ADB;S:{serviceName};P:{password};;";
@@ -198,11 +208,13 @@ public partial class MainWindow : Window
         Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
         {
             _layoutUpdateQueued = false;
-            var targetWidth = _viewModel.Devices.Count > 1 ? 720 : 560;
+            var targetWidth = _viewModel.Devices.Count > 1 ? 780 : 608;
             if (Math.Abs(Width - targetWidth) < 1) return;
             var center = Left + Width / 2;
             Width = targetWidth;
-            Left = center - targetWidth / 2;
+            var screenLeft = SystemParameters.VirtualScreenLeft;
+            var screenRight = screenLeft + SystemParameters.VirtualScreenWidth;
+            Left = Math.Clamp(center - targetWidth / 2, screenLeft, Math.Max(screenLeft, screenRight - targetWidth));
         }));
     }
 

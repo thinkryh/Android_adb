@@ -51,6 +51,7 @@ internal static class ThemeManager
             Solid("TextBrush", "#F4F7FD");
             Solid("MutedTextBrush", "#A9B8CC");
             Solid("AccentBrush", "#83B4FF");
+            Solid("ConnectionOnlineBrush", "#7BE1BF");
             Solid("ActionBrush", "#326CC5");
             Solid("AccentLightBrush", "#365678");
             Solid("DangerBrush", "#FF7087");
@@ -79,6 +80,7 @@ internal static class ThemeManager
             Solid("TextBrush", "#1D2938");
             Solid("MutedTextBrush", "#68798B");
             Solid("AccentBrush", "#2770E8");
+            Solid("ConnectionOnlineBrush", "#188A64");
             Solid("ActionBrush", "#2770E8");
             Solid("AccentLightBrush", "#DCEBFF");
             Solid("DangerBrush", "#DC4D64");

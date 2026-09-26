@@ -20,6 +20,29 @@ public sealed class DeviceViewModel : ObservableObject
     public AdbDevice Device { get; private set; }
     public string Serial => Device.Serial;
     public string ConnectionLabel => Device.ConnectionLabel;
+    public bool IsConnected => Status is DeviceStatus.Online or DeviceStatus.Mirroring;
+    public string ConnectionStatusLabel
+    {
+        get
+        {
+            var connection = Device.ConnectionType switch
+            {
+                DeviceConnectionType.Usb => "USB",
+                DeviceConnectionType.Wifi or DeviceConnectionType.Mdns => "无线",
+                DeviceConnectionType.Emulator => "模拟器",
+                _ => "设备"
+            };
+            var state = Status switch
+            {
+                DeviceStatus.Unauthorized => "待授权",
+                DeviceStatus.Offline => "离线",
+                DeviceStatus.Connecting => "连接中",
+                DeviceStatus.Failed => "连接失败",
+                _ => "已连接"
+            };
+            return $"{connection} {state}";
+        }
+    }
     public string SystemLabel => Device.Device ?? "正在读取设备信息";
     public string DisplayName { get => _displayName; set => SetProperty(ref _displayName, value); }
     public DeviceStatus Status
@@ -29,6 +52,8 @@ public sealed class DeviceViewModel : ObservableObject
         {
             if (!SetProperty(ref _status, value)) return;
             OnPropertyChanged(nameof(StatusLabel));
+            OnPropertyChanged(nameof(ConnectionStatusLabel));
+            OnPropertyChanged(nameof(IsConnected));
             OnPropertyChanged(nameof(IsMirroring));
             OnPropertyChanged(nameof(IsNotMirroring));
             OnPropertyChanged(nameof(CanStartMirror));
@@ -42,18 +67,20 @@ public sealed class DeviceViewModel : ObservableObject
         Device = device;
         DisplayName = device.DisplayName;
         OnPropertyChanged(nameof(ConnectionLabel));
+        OnPropertyChanged(nameof(ConnectionStatusLabel));
+        OnPropertyChanged(nameof(IsConnected));
         OnPropertyChanged(nameof(SystemLabel));
         if (mirroring) Status = DeviceStatus.Mirroring;
         else if (Status != DeviceStatus.Connecting) Status = device.Status;
     }
     public string StatusLabel => Status switch
     {
-        DeviceStatus.Online => "已连接",
-        DeviceStatus.Unauthorized => "等待手机授权",
-        DeviceStatus.Offline => "设备离线",
-        DeviceStatus.Connecting => "正在连接",
+        DeviceStatus.Online => "准备就绪",
+        DeviceStatus.Unauthorized => "请在手机上允许调试",
+        DeviceStatus.Offline => "请重新连接设备",
+        DeviceStatus.Connecting => "正在建立连接",
         DeviceStatus.Mirroring => "正在投屏",
-        DeviceStatus.Failed => "连接失败",
+        DeviceStatus.Failed => "请检查连接",
         _ => "未知状态"
     };
     private void OnPropertyChanged(string name) => RaisePropertyChanged(name);
