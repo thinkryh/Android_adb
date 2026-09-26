@@ -6,10 +6,10 @@
         mc:Ignorable="d"
         Title="Android投屏助手"
         Icon="Assets/AppIcon.png"
-        Width="620"
-        Height="310"
-        MinWidth="600"
-        MinHeight="310"
+        Width="560"
+        Height="326"
+        MinWidth="520"
+        MinHeight="326"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         AllowsTransparency="False"
@@ -54,10 +54,24 @@
 
             <Grid Grid.Row="1" Margin="18,2,18,0">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="40" />
+                    <RowDefinition Height="60" />
+                    <RowDefinition Height="32" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
-                <Grid Grid.Row="0" Margin="8,0,8,5">
+                <Grid Grid.Row="0" Margin="8,0,8,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="82" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="无线连接" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <UniformGrid Grid.Column="1" Columns="4" Rows="1" VerticalAlignment="Center">
+                        <Button Content="IP 直连" Click="AddWireless_Click" Height="34" Padding="0" Margin="0,0,5,0" Background="{DynamicResource AccentLightBrush}" BorderThickness="0" />
+                        <Button Content="配对码" Click="PairCode_Click" Height="34" Padding="0" Margin="0,0,5,0" BorderThickness="0" />
+                        <Button Content="扫码配对" Click="QrPair_Click" Height="34" Padding="0" Margin="0,0,5,0" BorderThickness="0" />
+                        <Button Content="mDNS 发现" Click="Mdns_Click" Height="34" Padding="0" BorderThickness="0" />
+                    </UniformGrid>
+                </Grid>
+                <Grid Grid.Row="1" Margin="8,0,8,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
@@ -67,29 +81,10 @@
                         <TextBlock Text="{Binding Devices.Count}" Foreground="{DynamicResource MutedTextBrush}" FontSize="12" VerticalAlignment="Center" Margin="10,0,0,0" />
                         <TextBlock Text=" 台" Foreground="{DynamicResource MutedTextBrush}" FontSize="12" VerticalAlignment="Center" />
                     </StackPanel>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                        <StackPanel.Style>
-                            <Style TargetType="StackPanel">
-                                <Setter Property="Visibility" Value="Visible" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Devices.Count}" Value="0"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
-                                    <DataTrigger Binding="{Binding Devices.Count}" Value="1"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </StackPanel.Style>
-                        <Button Content="IP 直连" Click="AddWireless_Click" Height="30" Width="78" Padding="0" Margin="0,0,5,0" Background="{DynamicResource AccentLightBrush}" BorderThickness="0" />
-                        <Button Content="配对码" Click="PairCode_Click" Height="30" Width="78" Padding="0" Margin="0,0,5,0" BorderThickness="0" />
-                        <Button Content="扫码配对" Click="QrPair_Click" Height="30" Width="78" Padding="0" Margin="0,0,5,0" BorderThickness="0" />
-                        <Button Content="mDNS 发现" Click="Mdns_Click" Height="30" Width="86" Padding="0" Margin="0" BorderThickness="0" />
-                    </StackPanel>
                 </Grid>
 
-                <Grid Grid.Row="1">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <ScrollViewer Grid.ColumnSpan="2">
+                <Grid Grid.Row="2">
+                    <ScrollViewer>
                     <ScrollViewer.Style>
                         <Style TargetType="ScrollViewer">
                             <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
@@ -103,12 +98,22 @@
                     <ItemsControl ItemsSource="{Binding Devices}" VerticalAlignment="Top">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <UniformGrid Columns="2" />
+                                <UniformGrid>
+                                    <UniformGrid.Style>
+                                        <Style TargetType="UniformGrid">
+                                            <Setter Property="Columns" Value="2" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Devices.Count}" Value="0"><Setter Property="Columns" Value="1" /></DataTrigger>
+                                                <DataTrigger Binding="{Binding Devices.Count}" Value="1"><Setter Property="Columns" Value="1" /></DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </UniformGrid.Style>
+                                </UniformGrid>
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Height="160" Margin="0,0,7,8" Padding="15,13"
+                                <Border Height="130" Margin="0,0,7,6" Padding="15,10"
                                         Background="{DynamicResource PanelStrongBrush}"
                                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                                         CornerRadius="18">
@@ -149,7 +154,7 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                     </ScrollViewer>
-                    <Border Grid.Column="0" Height="160" Margin="0,0,7,8" Background="{DynamicResource PanelStrongBrush}" CornerRadius="18" Padding="16">
+                    <Border Height="130" Margin="0,0,7,6" Background="{DynamicResource PanelStrongBrush}" CornerRadius="18" Padding="16">
                     <Border.Style>
                         <Style TargetType="Border">
                             <Setter Property="Visibility" Value="Collapsed" />
@@ -165,32 +170,6 @@
                         <TextBlock Text="连接 USB 后，在手机上允许调试。"
                                    Foreground="{DynamicResource MutedTextBrush}" Margin="0,7,0,0" TextAlignment="Center" />
                     </StackPanel>
-                    </Border>
-                    <Border Grid.Column="1" Height="160" Margin="7,0,0,8" Background="{DynamicResource PanelBrush}" CornerRadius="18" Padding="15,12">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="Visibility" Value="Collapsed" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Devices.Count}" Value="0"><Setter Property="Visibility" Value="Visible" /></DataTrigger>
-                                    <DataTrigger Binding="{Binding Devices.Count}" Value="1"><Setter Property="Visibility" Value="Visible" /></DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="*" />
-                            </Grid.RowDefinitions>
-                            <TextBlock Text="无线连接" FontSize="15" FontWeight="SemiBold" />
-                            <TextBlock Grid.Row="1" Text="手机与电脑处于同一网络" Foreground="{DynamicResource MutedTextBrush}" FontSize="11" Margin="0,4,0,0" />
-                            <UniformGrid Grid.Row="2" Columns="2" Rows="2" VerticalAlignment="Center">
-                                <Button Content="IP 直连" Click="AddWireless_Click" Height="34" Padding="0" Margin="0,0,5,4" Background="{DynamicResource AccentLightBrush}" BorderThickness="0" />
-                                <Button Content="配对码" Click="PairCode_Click" Height="34" Padding="0" Margin="5,0,0,4" BorderThickness="0" />
-                                <Button Content="扫码配对" Click="QrPair_Click" Height="34" Padding="0" Margin="0,4,5,0" BorderThickness="0" />
-                                <Button Content="mDNS 发现" Click="Mdns_Click" Height="34" Padding="0" Margin="5,4,0,0" BorderThickness="0" />
-                            </UniformGrid>
-                        </Grid>
                     </Border>
                 </Grid>
             </Grid>

@@ -20,6 +20,7 @@ public partial class MainWindow : Window
     private readonly Dictionary<string, FloatingToolbarWindow> _toolbars = new(StringComparer.OrdinalIgnoreCase);
     private bool _exitInProgress;
     private bool _exitApproved;
+    private bool _layoutUpdateQueued;
 
     public MainWindow()
     {
@@ -31,6 +32,7 @@ public partial class MainWindow : Window
         _scrcpy = new ScrcpyService(System.IO.Path.Combine(scrcpyRoot, "scrcpy.exe"), adb.Path);
         _viewModel = new MainViewModel(adb, _scrcpy, new SettingsService());
         DataContext = _viewModel;
+        _viewModel.Devices.CollectionChanged += (_, _) => QueueLayoutUpdate();
         ThemeButton.Content = ThemeManager.IsDark ? "浅色模式" : "黑夜模式";
         _deviceTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
         _deviceTimer.Tick += async (_, _) =>
@@ -187,6 +189,21 @@ public partial class MainWindow : Window
     {
         if ((sender as Button)?.Tag is not DeviceViewModel item) return;
         await StartMirrorForDeviceAsync(item);
+    }
+
+    private void QueueLayoutUpdate()
+    {
+        if (_layoutUpdateQueued || Dispatcher.HasShutdownStarted) return;
+        _layoutUpdateQueued = true;
+        Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+        {
+            _layoutUpdateQueued = false;
+            var targetWidth = _viewModel.Devices.Count > 1 ? 720 : 560;
+            if (Math.Abs(Width - targetWidth) < 1) return;
+            var center = Left + Width / 2;
+            Width = targetWidth;
+            Left = center - targetWidth / 2;
+        }));
     }
 
     private async Task StartMirrorForDeviceAsync(DeviceViewModel item)
