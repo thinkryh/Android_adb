@@ -1,0 +1,13 @@
+FFmpeg 8.1.2 build information for the scrcpy 4.1 Windows x64 binaries
+
+The configure string below was extracted from the bundled avutil-60.dll. It matches
+the options in scrcpy v4.1 app/deps/ffmpeg.sh for a win64 cross/shared build.
+Neither --enable-gpl nor --enable-nonfree appears in this binary's configure string.
+
+--prefix=/home/runner/work/scrcpy/scrcpy/app/deps/work/install/win64-cross-shared --pkg-config-flags=--static --extra-cflags='-O2 -fPIC' --disable-programs --disable-doc --disable-swscale --disable-avfilter --disable-network --disable-everything --disable-vulkan --disable-vaapi --disable-vdpau --enable-swresample --enable-libdav1d --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=av1 --enable-decoder=vp8 --enable-decoder=vp9 --enable-decoder=libdav1d --enable-decoder=pcm_s16le --enable-decoder=opus --enable-decoder=aac --enable-decoder=flac --enable-decoder=png --enable-protocol=file --enable-demuxer=image2 --enable-parser=png --enable-zlib --enable-muxer=matroska --enable-muxer=mp4 --enable-muxer=opus --enable-muxer=flac --enable-muxer=wav --disable-avdevice --disable-static --enable-shared --enable-cross-compile --cross-prefix=x86_64-w64-mingw32- --cc=x86_64-w64-mingw32-gcc --target-os=mingw32 --arch=x86_64
+
+Upstream build script: https://github.com/Genymobile/scrcpy/blob/v4.1/app/deps/ffmpeg.sh
+Upstream source: https://ffmpeg.org/releases/ffmpeg-8.1.2.tar.xz
+Upstream source SHA-256: 464beb5e7bf0c311e68b45ae2f04e9cc2af88851abb4082231742a74d97b524c
+No FFmpeg source patches are shown in the scrcpy v4.1 build script. The original
+source archive is separately attached to this project's GitHub release.
