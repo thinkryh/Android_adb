@@ -24,7 +24,7 @@ dotnet restore .\Android投屏助手_v2\Android投屏助手.csproj
 dotnet publish .\Android投屏助手_v2\Android投屏助手.csproj -c Release --self-contained false -o .\发布版
 ```
 
-最新的 `v2.0.0-preview.2` 为第三方许可材料修正版；发布范围、验证情况及已知限制见[版本说明](docs/发布说明-v2.0.0-preview.2.md)。旧版 `v2.0.0-preview.1` 的应用 ZIP 缺少部分第三方许可文件，请使用新版下载包。
+最新的 `v2.0.0-preview.3` 包含新版启动界面，发布范围、验证情况及已知限制见[版本说明](docs/发布说明-v2.0.0-preview.3.md)。旧版 `v2.0.0-preview.1` 的应用 ZIP 缺少部分第三方许可文件，请使用新版下载包。
 
 构建时项目会把上级 `scrcpy/`、项目许可证和第三方声明复制进 `发布版/`。两个 BAT 均使用根目录的统一启动流程，优先启动 `发布版/`，其次使用 Release 构建输出；没有图形程序时退回 v1。
 
