@@ -6,10 +6,10 @@
         mc:Ignorable="d"
         Title="Android投屏助手"
         Icon="Assets/AppIcon.png"
-        Width="880"
-        Height="304"
-        MinWidth="720"
-        MinHeight="304"
+        Width="620"
+        Height="310"
+        MinWidth="600"
+        MinHeight="310"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         AllowsTransparency="False"
@@ -27,9 +27,9 @@
             CornerRadius="28">
         <Grid>
             <Grid.RowDefinitions>
-                <RowDefinition Height="62" />
+                <RowDefinition Height="60" />
                 <RowDefinition Height="*" />
-                <RowDefinition Height="34" />
+                <RowDefinition Height="36" />
             </Grid.RowDefinitions>
 
             <Border Grid.Row="0" Margin="12,8,12,0" Background="{DynamicResource PanelBrush}"
@@ -43,10 +43,7 @@
                     <Border Width="36" Height="36" CornerRadius="11" Background="{DynamicResource HeaderIconBrush}" Margin="0,0,10,0">
                         <Image Source="Assets/AppIcon.png" Width="34" Height="24" Stretch="Uniform" VerticalAlignment="Center" />
                     </Border>
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="Android 投屏助手" FontSize="21" FontWeight="SemiBold" />
-                        <TextBlock Text="单设备自动投屏 · 多设备分别管理" Foreground="{DynamicResource MutedTextBrush}" FontSize="11" Margin="1,1,0,0" />
-                    </StackPanel>
+                    <TextBlock Text="Android 投屏助手" FontSize="21" FontWeight="SemiBold" VerticalAlignment="Center" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0">
                     <Button Content="刷新" Click="Refresh_Click" Height="32" Padding="12,0" Background="{DynamicResource PanelStrongBrush}" BorderThickness="0" />
@@ -55,9 +52,9 @@
                 </StackPanel>
             </Grid>
 
-            <Grid Grid.Row="1" Margin="20,2,20,0">
+            <Grid Grid.Row="1" Margin="18,2,18,0">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="44" />
+                    <RowDefinition Height="40" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
                 <Grid Grid.Row="0" Margin="8,0,8,5">
@@ -80,10 +77,10 @@
                                 </Style.Triggers>
                             </Style>
                         </StackPanel.Style>
-                        <Button Content="IP 直连" Click="AddWireless_Click" Height="30" Width="86" Padding="0" Margin="0,0,6,0" Background="{DynamicResource AccentLightBrush}" BorderThickness="0" />
-                        <Button Content="配对码" Click="PairCode_Click" Height="30" Width="86" Padding="0" Margin="0,0,6,0" BorderThickness="0" />
-                        <Button Content="扫码配对" Click="QrPair_Click" Height="30" Width="86" Padding="0" Margin="0,0,6,0" BorderThickness="0" />
-                        <Button Content="mDNS 发现" Click="Mdns_Click" Height="30" Width="92" Padding="0" Margin="0" BorderThickness="0" />
+                        <Button Content="IP 直连" Click="AddWireless_Click" Height="30" Width="78" Padding="0" Margin="0,0,5,0" Background="{DynamicResource AccentLightBrush}" BorderThickness="0" />
+                        <Button Content="配对码" Click="PairCode_Click" Height="30" Width="78" Padding="0" Margin="0,0,5,0" BorderThickness="0" />
+                        <Button Content="扫码配对" Click="QrPair_Click" Height="30" Width="78" Padding="0" Margin="0,0,5,0" BorderThickness="0" />
+                        <Button Content="mDNS 发现" Click="Mdns_Click" Height="30" Width="86" Padding="0" Margin="0" BorderThickness="0" />
                     </StackPanel>
                 </Grid>
 
@@ -111,37 +108,48 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Height="144" Margin="0,0,8,8" Padding="16,12"
+                                <Border Height="160" Margin="0,0,7,8" Padding="15,13"
                                         Background="{DynamicResource PanelStrongBrush}"
                                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                                         CornerRadius="18">
                                     <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel VerticalAlignment="Center" Margin="0,0,8,0">
-                                            <TextBlock Text="{Binding DisplayName}" FontSize="17" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                            <TextBlock Text="{Binding SystemLabel}" Foreground="{DynamicResource MutedTextBrush}" Margin="0,3,0,0" />
-                                            <TextBlock Text="{Binding StatusLabel}" Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold" Margin="0,8,0,0" />
-                                            <TextBlock Text="{Binding Serial}" Foreground="{DynamicResource MutedTextBrush}" FontSize="11" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right">
-                                            <Border Background="{DynamicResource AccentLightBrush}" CornerRadius="10" Padding="8,4" HorizontalAlignment="Right" Margin="0,0,0,12">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="*" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding DisplayName}" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,8,0" />
+                                            <Border Grid.Column="1" Background="{DynamicResource AccentLightBrush}" CornerRadius="10" Padding="8,4">
                                                 <TextBlock Text="{Binding ConnectionLabel}" FontSize="11" />
                                             </Border>
-                                            <Button Content="开始投屏" Tag="{Binding}" Click="StartMirror_Click" Width="88" Height="32" Padding="0" Margin="0" Background="{DynamicResource AccentLightBrush}" BorderThickness="0"
-                                                    IsEnabled="{Binding CanStartMirror}" Visibility="{Binding IsNotMirroring, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                            <Button Content="结束" Tag="{Binding}" Click="StopMirror_Click" Width="88" Height="32" Padding="0" Background="{DynamicResource StopButtonBrush}" BorderThickness="0" Margin="0"
-                                                    Visibility="{Binding IsMirroring, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                        </Grid>
+                                        <StackPanel Grid.Row="1" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding SystemLabel}" Foreground="{DynamicResource MutedTextBrush}" FontSize="12" />
+                                            <TextBlock Text="{Binding StatusLabel}" Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold" Margin="0,5,0,0" />
                                         </StackPanel>
+                                        <Grid Grid.Row="2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding Serial}" Foreground="{DynamicResource MutedTextBrush}" FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0" TextTrimming="CharacterEllipsis" />
+                                            <Button Grid.Column="1" Content="开始投屏" Tag="{Binding}" Click="StartMirror_Click" Width="88" Height="32" Padding="0" Margin="0" Background="{DynamicResource AccentLightBrush}" BorderThickness="0"
+                                                    IsEnabled="{Binding CanStartMirror}" Visibility="{Binding IsNotMirroring, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                            <Button Grid.Column="1" Content="结束" Tag="{Binding}" Click="StopMirror_Click" Width="88" Height="32" Padding="0" Background="{DynamicResource StopButtonBrush}" BorderThickness="0" Margin="0"
+                                                    Visibility="{Binding IsMirroring, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                        </Grid>
                                     </Grid>
                                 </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                     </ScrollViewer>
-                    <Border Grid.Column="0" Height="144" Margin="0,0,8,8" Background="{DynamicResource PanelStrongBrush}" CornerRadius="18" Padding="16">
+                    <Border Grid.Column="0" Height="160" Margin="0,0,7,8" Background="{DynamicResource PanelStrongBrush}" CornerRadius="18" Padding="16">
                     <Border.Style>
                         <Style TargetType="Border">
                             <Setter Property="Visibility" Value="Collapsed" />
@@ -158,7 +166,7 @@
                                    Foreground="{DynamicResource MutedTextBrush}" Margin="0,7,0,0" TextAlignment="Center" />
                     </StackPanel>
                     </Border>
-                    <Border Grid.Column="1" Height="144" Margin="8,0,0,8" Background="{DynamicResource PanelBrush}" CornerRadius="18" Padding="14,12">
+                    <Border Grid.Column="1" Height="160" Margin="7,0,0,8" Background="{DynamicResource PanelBrush}" CornerRadius="18" Padding="15,12">
                         <Border.Style>
                             <Style TargetType="Border">
                                 <Setter Property="Visibility" Value="Collapsed" />
@@ -170,22 +178,24 @@
                         </Border.Style>
                         <Grid>
                             <Grid.RowDefinitions>
-                                <RowDefinition Height="25" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
-                            <TextBlock Text="无线连接" FontSize="14" FontWeight="SemiBold" />
-                            <UniformGrid Grid.Row="1" Columns="2" Rows="2">
-                                <Button Content="IP 直连" Click="AddWireless_Click" Height="34" Padding="0" Margin="0,0,6,6" Background="{DynamicResource AccentLightBrush}" BorderThickness="0" />
-                                <Button Content="配对码" Click="PairCode_Click" Height="34" Padding="0" Margin="6,0,0,6" BorderThickness="0" />
-                                <Button Content="扫码配对" Click="QrPair_Click" Height="34" Padding="0" Margin="0,6,6,0" BorderThickness="0" />
-                                <Button Content="mDNS 发现" Click="Mdns_Click" Height="34" Padding="0" Margin="6,6,0,0" BorderThickness="0" />
+                            <TextBlock Text="无线连接" FontSize="15" FontWeight="SemiBold" />
+                            <TextBlock Grid.Row="1" Text="手机与电脑处于同一网络" Foreground="{DynamicResource MutedTextBrush}" FontSize="11" Margin="0,4,0,0" />
+                            <UniformGrid Grid.Row="2" Columns="2" Rows="2" VerticalAlignment="Center">
+                                <Button Content="IP 直连" Click="AddWireless_Click" Height="34" Padding="0" Margin="0,0,5,4" Background="{DynamicResource AccentLightBrush}" BorderThickness="0" />
+                                <Button Content="配对码" Click="PairCode_Click" Height="34" Padding="0" Margin="5,0,0,4" BorderThickness="0" />
+                                <Button Content="扫码配对" Click="QrPair_Click" Height="34" Padding="0" Margin="0,4,5,0" BorderThickness="0" />
+                                <Button Content="mDNS 发现" Click="Mdns_Click" Height="34" Padding="0" Margin="5,4,0,0" BorderThickness="0" />
                             </UniformGrid>
                         </Grid>
                     </Border>
                 </Grid>
             </Grid>
 
-            <Grid Grid.Row="2" Margin="24,0,24,0">
+            <Grid Grid.Row="2" Margin="22,0,22,0">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                 <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" />
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
