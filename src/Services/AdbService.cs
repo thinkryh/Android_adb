@@ -117,27 +117,6 @@ public sealed class AdbService
         return result.ExitCode == 0 && result.Output.Contains("success", StringComparison.OrdinalIgnoreCase);
     }
 
-    public async Task<IReadOnlyList<MdnsEndpoint>> DiscoverMdnsAsync(CancellationToken cancellationToken = default)
-    {
-        var result = await RunAsync(["mdns", "services"], cancellationToken);
-        if (result.ExitCode != 0) return [];
-        var list = new List<MdnsEndpoint>();
-        foreach (var line in result.Output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
-        {
-            var match = Regex.Match(line.Trim(), @"^(?<service>\S+)\s+(?<address>\S+)(?:\s+(?<name>.*))?$");
-            if (!match.Success || !IsEndpoint(match.Groups["address"].Value)) continue;
-            var service = match.Groups["service"].Value;
-            if (!service.Contains("adb-tls", StringComparison.OrdinalIgnoreCase)) continue;
-            list.Add(new MdnsEndpoint
-            {
-                ServiceType = service,
-                Address = match.Groups["address"].Value,
-                ServiceName = match.Groups["name"].Value.Trim()
-            });
-        }
-        return list;
-    }
-
     public async Task CapturePngToFileAsync(string serial, string destinationPath, CancellationToken cancellationToken = default)
     {
         if (!Exists) throw new FileNotFoundException("找不到 adb.exe。", _adbPath);
@@ -192,7 +171,7 @@ public sealed class AdbService
     public static DeviceConnectionType Classify(string serial)
     {
         if (serial.StartsWith("emulator-", StringComparison.OrdinalIgnoreCase)) return DeviceConnectionType.Emulator;
-        if (serial.Contains("_adb-tls-connect", StringComparison.OrdinalIgnoreCase)) return DeviceConnectionType.Mdns;
+        if (serial.Contains("_adb-tls-connect", StringComparison.OrdinalIgnoreCase)) return DeviceConnectionType.Wifi;
         if (IsEndpoint(serial)) return DeviceConnectionType.Wifi;
         return DeviceConnectionType.Usb;
     }

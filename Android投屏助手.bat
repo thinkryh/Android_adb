@@ -7,11 +7,16 @@ if exist "%APP%" (
     start "" "%APP%"
     exit /b 0
 )
-set "APP=%ROOT%Android投屏助手_v2\bin\Release\net10.0-windows\Android投屏助手.exe"
+set "APP=%ROOT%src\bin\x64\Release\net10.0-windows\Android投屏助手.exe"
 if exist "%APP%" (
     start "" "%APP%"
     exit /b 0
 )
-for %%I in ("%ROOT%程序组件\Android投屏助手.ps1") do set "MIRROR_HELPER=%%~sI"
+set "APP=%ROOT%src\bin\Release\net10.0-windows\Android投屏助手.exe"
+if exist "%APP%" (
+    start "" "%APP%"
+    exit /b 0
+)
+for %%I in ("%ROOT%legacy-v1\Android投屏助手.ps1") do set "MIRROR_HELPER=%%~sI"
 "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%MIRROR_HELPER%"
 exit /b %errorlevel%

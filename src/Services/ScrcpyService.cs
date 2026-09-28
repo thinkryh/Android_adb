@@ -40,7 +40,7 @@ public sealed class ScrcpyService
         {
             if (_sessions.TryGetValue(device.Serial, out var existing) && !existing.HasExited) return existing;
         }
-        var wireless = device.ConnectionType is DeviceConnectionType.Wifi or DeviceConnectionType.Mdns;
+        var wireless = device.ConnectionType == DeviceConnectionType.Wifi;
         var process = new Process
         {
             StartInfo = new ProcessStartInfo
@@ -116,7 +116,7 @@ public sealed class ScrcpyService
     public static IEnumerable<string> BuildArguments(AdbDevice device, bool wireless)
     {
         yield return $"--serial={device.Serial}";
-        yield return $"--window-title=Android投屏助手 - {device.DisplayName}";
+        yield return $"--window-title=投屏助手 - {device.DisplayName}";
         yield return "--stay-awake";
         yield return "--max-fps=30";
         yield return wireless ? "--max-size=1600" : "--max-size=1920";

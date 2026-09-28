@@ -1,8 +1,9 @@
-程序组件/.android/
-程序组件/上次无线地址.txt
+legacy-v1/.android/
+legacy-v1/上次无线地址.txt
 历史文件/
+src/bin/
+src/obj/
 Android投屏助手_v2/bin/
-Android投屏助手_v2/obj/
 发布版/
 .verify-adb-home*/
 .dotnet-cli-home/

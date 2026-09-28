@@ -1,13 +1,12 @@
 using Android投屏助手.Models;
 using Android投屏助手.Services;
 using Android投屏助手.ViewModels;
-using QRCoder;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
 namespace Android投屏助手;
@@ -45,7 +44,7 @@ public partial class MainWindow : Window
     {
         if (!_viewModel.Adb.Exists)
         {
-            GlassDialog.Message(this, "缺少程序组件", "没有找到 scrcpy 文件夹或 adb.exe。\n请保持发布目录中的 scrcpy 文件夹完整。", true);
+            GlassDialog.Message(this, "缺少程序组件", "没有找到 scrcpy 文件夹或 adb.exe，请检查程序文件是否完整。", true);
             return;
         }
         await _viewModel.RefreshAsync();
@@ -56,9 +55,13 @@ public partial class MainWindow : Window
             await StartMirrorForDeviceAsync(_viewModel.Devices[0]);
     }
 
-    private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void Header_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (e.ButtonState == MouseButtonState.Pressed) DragMove();
+        if (e.LeftButton != MouseButtonState.Pressed) return;
+        for (var element = e.OriginalSource as DependencyObject; element is not null; element = VisualTreeHelper.GetParent(element))
+            if (element is ButtonBase) return;
+        try { DragMove(); }
+        catch (InvalidOperationException) { }
     }
 
     private void WirelessButton_Click(object sender, RoutedEventArgs e) => WirelessPopup.IsOpen = !WirelessPopup.IsOpen;
@@ -70,7 +73,9 @@ public partial class MainWindow : Window
     }
     private void UpdateThemeButton()
     {
-        ThemeIcon.Text = ThemeManager.IsDark ? "☾" : "☀";
+        ThemeMoonIcon.Visibility = ThemeManager.IsDark ? Visibility.Visible : Visibility.Collapsed;
+        ThemeSunIcon.Visibility = ThemeManager.IsDark ? Visibility.Collapsed : Visibility.Visible;
+        ThemeLabel.Text = ThemeManager.IsDark ? "深色" : "浅色";
         ThemeButton.ToolTip = ThemeManager.IsDark ? "黑夜模式已开启，点击切换为浅色模式" : "浅色模式已开启，点击切换为黑夜模式";
     }
     private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
@@ -80,7 +85,7 @@ public partial class MainWindow : Window
         if (_exitApproved) return;
         e.Cancel = true;
         if (_exitInProgress) return;
-        if (!GlassDialog.Confirm(this, "退出助手", "关闭助手将结束所有投屏和快捷栏；正在录制的视频会先尝试保存。\n确定要退出吗？", "结束并退出", "继续使用")) return;
+        if (!GlassDialog.Confirm(this, "退出助手", "关闭助手将结束投屏。正在录制的视频会先尝试保存。\n确定要退出吗？", "结束并退出", "继续使用")) return;
         _exitInProgress = true;
         _deviceTimer.Stop();
         try
@@ -102,7 +107,7 @@ public partial class MainWindow : Window
     private async void AddWireless_Click(object sender, RoutedEventArgs e)
     {
         WirelessPopup.IsOpen = false;
-        var address = Prompt("IP 直连", "请输入无线连接地址（例如 192.168.1.10:45915）：");
+        var address = Prompt("IP 直连", "请输入无线连接地址（例如 192.168.1.10:38467）：");
         if (!string.IsNullOrWhiteSpace(address) && !await _viewModel.ConnectIpAsync(address.Trim()))
             GlassDialog.Message(this, "无线连接失败", _viewModel.StatusText, true);
     }
@@ -113,86 +118,6 @@ public partial class MainWindow : Window
         var values = ShowPairDialog();
         if (values is not null && !await _viewModel.PairCodeAsync(values.Value.PairAddress, values.Value.Code, values.Value.ConnectAddress))
             GlassDialog.Message(this, "无线配对失败", _viewModel.StatusText, true);
-    }
-
-    private async void Mdns_Click(object sender, RoutedEventArgs e)
-    {
-        WirelessPopup.IsOpen = false;
-        var services = await _viewModel.DiscoverMdnsAsync();
-        var connect = services.Where(x => !x.IsPairing).ToList();
-        if (connect.Count == 0)
-        {
-            GlassDialog.Message(this, "mDNS 发现", "没有发现可连接的无线调试服务。\n请确认手机已开启无线调试，并与电脑连接同一网络。");
-            return;
-        }
-        var selected = ShowSelectionDialog("选择无线设备", connect.Select(x => $"{x.Address}  {x.ServiceName}").ToList());
-        if (selected is not null && !await _viewModel.ConnectIpAsync(connect[selected.Value].Address))
-            GlassDialog.Message(this, "无线连接失败", _viewModel.StatusText, true);
-    }
-
-    private async void QrPair_Click(object sender, RoutedEventArgs e)
-    {
-        WirelessPopup.IsOpen = false;
-        var serviceName = "studio-" + Guid.NewGuid().ToString("N")[..10];
-        var password = Random.Shared.NextInt64(1_000_000_000, 9_999_999_999).ToString();
-        var payload = $"WIFI:T:ADB;S:{serviceName};P:{password};;";
-        using var generator = new QRCodeGenerator();
-        using var qrData = generator.CreateQrCode(payload, QRCodeGenerator.ECCLevel.Q);
-        using var qrCode = new PngByteQRCode(qrData);
-        var bytes = qrCode.GetGraphic(8);
-        var image = new Image { Source = ToBitmap(bytes), Width = 300, Height = 300, Margin = new Thickness(0, 12, 0, 8) };
-        var start = new Button { Content = "我已扫码，开始查找", Padding = new Thickness(16, 8, 16, 8), HorizontalAlignment = HorizontalAlignment.Center };
-        var status = new TextBlock { Text = "手机：设置 → 开发者选项 → 无线调试 → 使用二维码配对", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(25, 0, 25, 12), Foreground = (Brush)Application.Current.FindResource("MutedTextBrush") };
-        var panel = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
-        using var pairingCancellation = new CancellationTokenSource();
-        panel.Children.Add(new TextBlock { Text = "请使用手机无线调试页面扫描", FontSize = 16, FontWeight = FontWeights.SemiBold, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 18, 0, 0) });
-        panel.Children.Add(image);
-        panel.Children.Add(status);
-        panel.Children.Add(start);
-        var window = GlassDialog.Form(this, "扫码配对", 430, 590, panel);
-        window.Closed += (_, _) => pairingCancellation.Cancel();
-        start.Click += async (_, _) =>
-        {
-            start.IsEnabled = false;
-            status.Text = "正在等待手机广播配对服务…";
-            try
-            {
-                var endpoint = await WaitForMdnsAsync(serviceName, true, TimeSpan.FromMinutes(2), pairingCancellation.Token);
-                if (endpoint is null) throw new InvalidOperationException("等待扫码超时，请保持手机和电脑在同一网络。");
-                if (!await _viewModel.Adb.PairAsync(endpoint.Address, password)) throw new InvalidOperationException("扫码配对失败。");
-                status.Text = "配对成功，正在查找连接服务…";
-                var connect = await WaitForMdnsAsync(string.Empty, false, TimeSpan.FromSeconds(30), pairingCancellation.Token,
-                    EndpointHost(endpoint.Address));
-                if (connect is null)
-                    throw new InvalidOperationException("配对成功，但没有发现连接服务。请从无线调试主页面获取连接地址，并使用 IP 直连。");
-                if (!await _viewModel.ConnectIpAsync(connect.Address))
-                    throw new InvalidOperationException($"配对成功，但连接失败：{_viewModel.StatusText}");
-                status.Text = "配对及连接成功，可以关闭此窗口。";
-            }
-            catch (OperationCanceledException) { status.Text = "扫码配对已取消。"; }
-            catch (Exception ex) { status.Text = ex.Message; }
-            finally { start.IsEnabled = true; }
-        };
-        window.ShowDialog();
-    }
-
-    private static string EndpointHost(string address) => address[..address.LastIndexOf(':')].Trim('[', ']');
-
-    private async Task<MdnsEndpoint?> WaitForMdnsAsync(string serviceName, bool pairing, TimeSpan timeout,
-        CancellationToken cancellationToken, string? host = null)
-    {
-        var end = DateTime.UtcNow + timeout;
-        while (DateTime.UtcNow < end)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var services = await _viewModel.DiscoverMdnsAsync();
-            var endpoint = services.FirstOrDefault(x => x.IsPairing == pairing
-                && (string.IsNullOrWhiteSpace(serviceName) || x.ServiceName.Contains(serviceName, StringComparison.OrdinalIgnoreCase))
-                && (host is null || EndpointHost(x.Address).Equals(host, StringComparison.OrdinalIgnoreCase)));
-            if (endpoint is not null) return endpoint;
-            await Task.Delay(1000, cancellationToken);
-        }
-        return null;
     }
 
     private async void StartMirror_Click(object sender, RoutedEventArgs e)
@@ -208,7 +133,7 @@ public partial class MainWindow : Window
         Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
         {
             _layoutUpdateQueued = false;
-            var targetWidth = _viewModel.Devices.Count > 1 ? 780 : 608;
+            var targetWidth = _viewModel.Devices.Count > 1 ? 660 : 520;
             if (Math.Abs(Width - targetWidth) < 1) return;
             var center = Left + Width / 2;
             Width = targetWidth;
@@ -224,7 +149,7 @@ public partial class MainWindow : Window
         try
         {
             var process = await _viewModel.StartMirrorAsync(item);
-            var toolbar = new FloatingToolbarWindow(item, _viewModel.Adb, process, $"Android投屏助手 - {item.DisplayName}");
+            var toolbar = new FloatingToolbarWindow(item, _viewModel.Adb, process, $"投屏助手 - {item.DisplayName}");
             var attached = false;
             for (var attempt = 0; attempt < 25; attempt++)
             {
@@ -283,28 +208,26 @@ public partial class MainWindow : Window
         return AppContext.BaseDirectory;
     }
 
-    private static BitmapImage ToBitmap(byte[] bytes)
-    {
-        using var stream = new MemoryStream(bytes);
-        var image = new BitmapImage();
-        image.BeginInit();
-        image.CacheOption = BitmapCacheOption.OnLoad;
-        image.StreamSource = stream;
-        image.EndInit();
-        image.Freeze();
-        return image;
-    }
-
     private string? Prompt(string title, string message)
     {
-        var box = new TextBox { Width = 330, Margin = new Thickness(0, 8, 0, 18) };
+        var box = new TextBox { Width = 330, Margin = new Thickness(0, 8, 0, 10) };
         var ok = new Button { Content = "连接", IsDefault = true, Width = 80, HorizontalAlignment = HorizontalAlignment.Right };
         var cancel = new Button { Content = "取消", IsCancel = true, Width = 80, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 0, 90, 0) };
         var buttons = new Grid(); buttons.Children.Add(ok); buttons.Children.Add(cancel);
         var panel = new StackPanel { Margin = new Thickness(22) };
         panel.Children.Add(new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap });
-        panel.Children.Add(box); panel.Children.Add(buttons);
-        var window = GlassDialog.Form(this, title, 430, 240, panel);
+        panel.Children.Add(box);
+        var tip = new TextBlock
+        {
+            Text = "手机：设置 → 开发者选项 → 无线调试。请填写无线调试主页面的 IP 地址和连接端口，不要填写配对弹窗中的临时端口。",
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 12,
+            Margin = new Thickness(0, 0, 0, 16)
+        };
+        tip.SetResourceReference(TextBlock.ForegroundProperty, "MutedTextBrush");
+        panel.Children.Add(tip);
+        panel.Children.Add(buttons);
+        var window = GlassDialog.Form(this, title, 430, 285, panel);
         ok.Click += (_, _) => window.DialogResult = true;
         return window.ShowDialog() == true ? box.Text : null;
     }
@@ -318,23 +241,24 @@ public partial class MainWindow : Window
         var cancel = new Button { Content = "取消", IsCancel = true, Width = 80, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 0, 100, 0) };
         var buttons = new Grid(); buttons.Children.Add(ok); buttons.Children.Add(cancel);
         var panel = new StackPanel { Margin = new Thickness(22) };
+        var tip = new TextBlock
+        {
+            Text = "手机：设置 → 开发者选项 → 无线调试 → 使用配对码配对设备。配对地址和六位码在配对弹窗中；连接端口在无线调试主页面，两者通常不同。",
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 12,
+            Margin = new Thickness(0, 0, 0, 12)
+        };
+        tip.SetResourceReference(TextBlock.ForegroundProperty, "MutedTextBrush");
+        panel.Children.Add(tip);
         panel.Children.Add(new TextBlock { Text = "配对地址（例如 192.168.1.10:42699）" }); panel.Children.Add(pair);
         panel.Children.Add(new TextBlock { Text = "六位配对码" }); panel.Children.Add(code);
-        panel.Children.Add(new TextBlock { Text = "连接地址（可选，例如 192.168.1.10:45915）" }); panel.Children.Add(connect);
+        panel.Children.Add(new TextBlock { Text = "连接地址（可选，例如 192.168.1.10:38467）" }); panel.Children.Add(connect);
         panel.Children.Add(buttons);
-        var window = GlassDialog.Form(this, "配对码连接", 480, 365, panel);
+        var window = GlassDialog.Form(this, "配对码连接", 480, 420, panel);
         ok.Click += (_, _) => window.DialogResult = true;
         if (window.ShowDialog() != true) return null;
         return (pair.Text.Trim(), code.Text.Trim(), string.IsNullOrWhiteSpace(connect.Text) ? null : connect.Text.Trim());
     }
 
-    private int? ShowSelectionDialog(string title, IReadOnlyList<string> items)
-    {
-        var list = new ListBox { ItemsSource = items, SelectedIndex = 0, Margin = new Thickness(18) };
-        var ok = new Button { Content = "连接选中设备", IsDefault = true, Width = 120, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(18, 0, 18, 18) };
-        var panel = new DockPanel(); DockPanel.SetDock(ok, Dock.Bottom); panel.Children.Add(ok); panel.Children.Add(list);
-        var window = GlassDialog.Form(this, title, 500, 350, panel);
-        ok.Click += (_, _) => window.DialogResult = true;
-        return window.ShowDialog() == true && list.SelectedIndex >= 0 ? list.SelectedIndex : null;
-    }
+
 }

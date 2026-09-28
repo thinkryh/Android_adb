@@ -28,7 +28,7 @@ public sealed class DeviceViewModel : ObservableObject
             var connection = Device.ConnectionType switch
             {
                 DeviceConnectionType.Usb => "USB",
-                DeviceConnectionType.Wifi or DeviceConnectionType.Mdns => "无线",
+                DeviceConnectionType.Wifi => "无线",
                 DeviceConnectionType.Emulator => "模拟器",
                 _ => "设备"
             };
@@ -190,12 +190,6 @@ public sealed class MainViewModel : ObservableObject
             return true;
         }
         catch (Exception ex) { StatusText = ex.Message; return false; }
-    }
-
-    public async Task<IReadOnlyList<MdnsEndpoint>> DiscoverMdnsAsync()
-    {
-        try { return await _adb.DiscoverMdnsAsync(); }
-        catch { return []; }
     }
 
     public async Task<Process> StartMirrorAsync(DeviceViewModel item)

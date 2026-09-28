@@ -4,12 +4,13 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="Android投屏助手"
+        Title="投屏助手"
         Icon="Assets/AppIcon.png"
-        Width="608"
+        Width="520"
         Height="467"
-        MinWidth="580"
+        MinWidth="500"
         MinHeight="430"
+        ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         AllowsTransparency="False"
@@ -32,7 +33,7 @@
                 <RowDefinition Height="84" />
             </Grid.RowDefinitions>
 
-            <Grid Grid.Row="0" Margin="24,0,24,0" MouseLeftButtonDown="Header_MouseLeftButtonDown">
+            <Grid Grid.Row="0" Margin="24,0,24,0" Background="Transparent" PreviewMouseLeftButtonDown="Header_PreviewMouseLeftButtonDown">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
@@ -42,15 +43,15 @@
                     <Border Width="36" Height="36" CornerRadius="11" Background="{DynamicResource HeaderIconBrush}" Margin="0,0,10,0">
                         <Image Source="Assets/AppIcon.png" Width="34" Height="24" Stretch="Uniform" VerticalAlignment="Center" />
                     </Border>
-                    <TextBlock Text="Android 投屏助手" FontSize="19" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <TextBlock Text="投屏助手" FontSize="19" FontWeight="SemiBold" VerticalAlignment="Center" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button x:Name="WirelessButton" Click="WirelessButton_Click" Width="120" Height="36" Padding="8,0" Margin="0,0,7,0"
-                            Background="{DynamicResource ActionBrush}" Foreground="White" BorderThickness="0"
+                    <Button x:Name="WirelessButton" Click="WirelessButton_Click" Width="108" Height="36" Padding="8,0" Margin="0,0,7,0"
+                            Background="{DynamicResource PanelStrongBrush}" BorderThickness="0"
                             ToolTip="选择无线连接方式" AutomationProperties.Name="无线连接">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <TextBlock Text="无线连接" FontSize="14" Foreground="White" VerticalAlignment="Center" />
-                            <Path Data="M 0,0 L 4,4 L 8,0" Stroke="White" StrokeThickness="1.6" Margin="9,2,0,0" VerticalAlignment="Center" />
+                            <TextBlock Text="无线连接" FontSize="14" VerticalAlignment="Center" />
+                            <Path Data="M 0,0 L 4,4 L 8,0" Stroke="{DynamicResource TextBrush}" StrokeThickness="1.6" Margin="7,2,0,0" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
                     <Button Content="刷新" Click="Refresh_Click" Width="58" Height="36" Padding="0" Margin="0,0,4,0"
@@ -62,13 +63,11 @@
 
             <Popup x:Name="WirelessPopup" PlacementTarget="{Binding ElementName=WirelessButton}" Placement="Bottom"
                    StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" VerticalOffset="7">
-                <Border Width="208" Padding="8" CornerRadius="16" Background="{DynamicResource PanelStrongBrush}"
+                <Border Width="156" Padding="8" CornerRadius="16" Background="{DynamicResource PanelStrongBrush}"
                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                     <StackPanel>
                         <Button Content="IP 直连" Click="AddWireless_Click" Height="38" Margin="0,0,0,3" Padding="12,0" HorizontalContentAlignment="Left" BorderThickness="0" />
                         <Button Content="配对码" Click="PairCode_Click" Height="38" Margin="0,0,0,3" Padding="12,0" HorizontalContentAlignment="Left" BorderThickness="0" />
-                        <Button Content="扫码配对" Click="QrPair_Click" Height="38" Margin="0,0,0,3" Padding="12,0" HorizontalContentAlignment="Left" BorderThickness="0" />
-                        <Button Content="mDNS 发现" Click="Mdns_Click" Height="38" Margin="0" Padding="12,0" HorizontalContentAlignment="Left" BorderThickness="0" />
                     </StackPanel>
                 </Border>
             </Popup>
@@ -91,7 +90,7 @@
                 </Grid>
 
                 <Grid Grid.Row="1">
-                    <ScrollViewer>
+                    <ScrollViewer VerticalAlignment="Center">
                     <ScrollViewer.Style>
                         <Style TargetType="ScrollViewer">
                             <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
@@ -102,7 +101,7 @@
                             </Style.Triggers>
                         </Style>
                     </ScrollViewer.Style>
-                    <ItemsControl ItemsSource="{Binding Devices}" VerticalAlignment="Top">
+                    <ItemsControl ItemsSource="{Binding Devices}" VerticalAlignment="Center">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <UniformGrid>
@@ -120,7 +119,7 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Height="203" Margin="0,0,7,8" Padding="20,16"
+                                <Border Height="166" Margin="0,0,7,8" Padding="17,12"
                                         Background="{DynamicResource PanelStrongBrush}"
                                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                                         CornerRadius="18">
@@ -183,7 +182,7 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                     </ScrollViewer>
-                    <Border Height="203" Margin="0,0,7,8" Background="{DynamicResource PanelStrongBrush}" CornerRadius="18" Padding="16">
+                    <Border Height="166" Margin="0,0,7,8" Background="{DynamicResource PanelStrongBrush}" CornerRadius="18" Padding="16" VerticalAlignment="Center">
                     <Border.Style>
                         <Style TargetType="Border">
                             <Setter Property="Visibility" Value="Collapsed" />
@@ -196,7 +195,7 @@
                     </Border.Style>
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                         <TextBlock Text="等待连接手机" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" />
-                        <TextBlock Text="连接 USB 后，在手机上允许调试。"
+                        <TextBlock Text="连接 USB 手机，或使用顶部的无线连接。"
                                    Foreground="{DynamicResource MutedTextBrush}" Margin="0,7,0,0" TextAlignment="Center" />
                     </StackPanel>
                     </Border>
@@ -204,12 +203,24 @@
             </Grid>
 
             <Grid Grid.Row="2" Margin="24,0,24,0">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
                 <Border Grid.ColumnSpan="2" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" VerticalAlignment="Top" />
-                <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" Margin="0,0,12,0" FontSize="12" />
-                <Button x:Name="ThemeButton" Grid.Column="1" Click="Theme_Click" Width="40" Height="40" Padding="0" Margin="0" VerticalAlignment="Center"
-                        Background="{DynamicResource PanelStrongBrush}" BorderThickness="1" AutomationProperties.Name="切换颜色模式">
-                    <TextBlock x:Name="ThemeIcon" Text="☾" FontFamily="Segoe UI Symbol" FontSize="20" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                <TextBlock Grid.Column="0" Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" Margin="0,0,12,0" FontSize="12" />
+                <Button x:Name="ThemeButton" Grid.Column="1" Click="Theme_Click" Width="65" Height="32" Padding="0" Margin="0"
+                        Background="Transparent" BorderThickness="0" AutomationProperties.Name="切换颜色模式" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Path x:Name="ThemeMoonIcon" Width="10" Height="10" Stretch="Uniform"
+                              Data="M 20.985,12.486 A 9,9 0 1 1 11.514,3.015 C 11.919,2.993 12.131,3.475 11.916,3.817 A 6.5,6.5 0 0 0 20.186,12.087 C 20.528,11.872 21.01,12.083 20.985,12.486 Z"
+                              Stroke="{DynamicResource MutedTextBrush}" StrokeThickness="1.7"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                              VerticalAlignment="Center" Margin="0,0,5,0" />
+                        <TextBlock x:Name="ThemeSunIcon" Text="☼" FontFamily="Segoe UI Symbol" FontSize="17"
+                                   Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" Margin="0,0,5,0" Visibility="Collapsed" />
+                        <TextBlock x:Name="ThemeLabel" Text="深色" FontSize="12" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                    </StackPanel>
                 </Button>
             </Grid>
         </Grid>

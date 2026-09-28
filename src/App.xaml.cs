@@ -15,7 +15,7 @@ public partial class App : Application
 #endif
         if (!created)
         {
-            GlassDialog.Message(null, "Android投屏助手", "助手已经在运行，请切回现有窗口。");
+            GlassDialog.Message(null, "投屏助手", "助手已经在运行，请切回现有窗口。");
             Shutdown();
             return;
         }

@@ -7,7 +7,6 @@ public enum DeviceConnectionType
 {
     Usb,
     Wifi,
-    Mdns,
     Emulator,
     Unknown
 }
@@ -36,18 +35,9 @@ public sealed class AdbDevice
     {
         DeviceConnectionType.Usb => "USB 数据线",
         DeviceConnectionType.Wifi => "无线调试",
-        DeviceConnectionType.Mdns => "无线发现",
         DeviceConnectionType.Emulator => "模拟器",
         _ => "未知连接"
     };
-}
-
-public sealed class MdnsEndpoint
-{
-    public required string ServiceType { get; init; }
-    public required string Address { get; init; }
-    public string ServiceName { get; init; } = string.Empty;
-    public bool IsPairing => ServiceType.Contains("pairing", StringComparison.OrdinalIgnoreCase);
 }
 
 public class ObservableObject : INotifyPropertyChanged

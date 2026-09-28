@@ -6,13 +6,14 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>Android投屏助手</AssemblyName>
+    <Version>2.0.0-preview.4</Version>
     <RootNamespace>Android投屏助手</RootNamespace>
-    <Platforms>AnyCPU</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="QRCoder" Version="1.6.0" />
+    <PackageReference Include="ScreenRecorderLib" Version="7.0.1" />
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Assets\AppIcon.png" />
@@ -25,4 +26,7 @@
     <Content Include="..\发布包使用说明.md" Link="使用说明.md" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="..\third_party_licenses\**\*" LinkBase="third_party_licenses" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
+  <Target Name="OmitThirdPartyDebugSymbols" AfterTargets="Publish">
+    <Delete Files="$(PublishDir)ScreenRecorderLib.pdb" />
+  </Target>
 </Project>

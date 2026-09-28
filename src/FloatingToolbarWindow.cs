@@ -35,6 +35,7 @@ public sealed class FloatingToolbarWindow : Window
     private readonly Button _pinButton;
     private readonly Button _captureButton;
     private readonly Button _recordButton;
+    private readonly TextBlock _recordTimerText;
     private readonly Native.WinEventProc _winEventProc;
     private IntPtr _trackedScrcpyHandle;
     private IntPtr _locationHook;
@@ -71,11 +72,11 @@ public sealed class FloatingToolbarWindow : Window
         _adb = adb;
         _scrcpyProcess = scrcpyProcess;
         _scrcpyTitle = scrcpyTitle;
-        _recorder = new ScreenRecorderService(adb, device.Device);
+        _recorder = new ScreenRecorderService();
         _winEventProc = OnScrcpyWindowEvent;
 
         Title = "投屏快捷操作";
-        Width = 60;
+        Width = 48;
         SizeToContent = SizeToContent.Height;
         WindowStyle = WindowStyle.None;
         AllowsTransparency = true;
@@ -86,22 +87,19 @@ public sealed class FloatingToolbarWindow : Window
         TextOptions.SetTextRenderingMode(this, TextRenderingMode.ClearType);
         Topmost = false;
         ShowInTaskbar = false;
-        _panel = new StackPanel { Margin = new Thickness(7, 7, 7, 7) };
+        _panel = new StackPanel { Margin = new Thickness(4) };
         _dragArea = new Border
         {
-            Width = 44,
-            Height = 12,
-            Margin = new Thickness(0, 0, 0, 5),
+            Width = 38,
+            Height = 9,
+            Margin = new Thickness(0, 3, 0, 0),
             Background = Brushes.Transparent,
             Cursor = Cursors.SizeAll,
             ToolTip = "移动工具栏"
         };
         _dragArea.MouseLeftButtonDown += Handle_MouseLeftButtonDown;
-        _panel.Children.Add(_dragArea);
 
         _collapseButton = AddButton(_panel, Geometry.Parse("M 7,15 L 12,10 L 17,15"), "收起工具栏", ToggleCollapseAsync);
-        _collapseButton.Height = 26;
-        _collapseButton.Margin = new Thickness(0, 0, 0, 5);
 
         _pinButton = AddButton(_panel, Geometry.Parse("M 8,3.5 L 16,3.5 L 15,8.5 L 18,11.5 L 18,13.5 L 6,13.5 L 6,11.5 L 9,8.5 Z M 12,13.5 L 12,21"), "置顶投屏窗口", TogglePinAsync);
         AddButton(_panel, Geometry.Parse("M 3.5,10.5 L 12,3.8 L 20.5,10.5 M 5.5,9.6 L 5.5,20 L 18.5,20 L 18.5,9.6 M 9.5,20 L 9.5,14.3 L 14.5,14.3 L 14.5,20"), "主页", () => RunKeyAsync("3"));
@@ -114,6 +112,18 @@ public sealed class FloatingToolbarWindow : Window
             await CaptureAsync(true);
         };
         _recordButton = AddButton(_panel, new EllipseGeometry(new Point(12, 12), 8.55, 8.55), "开始录屏", ToggleRecordingAsync, true);
+        _recordTimerText = new TextBlock
+        {
+            Text = "00:00",
+            FontSize = 11,
+            FontWeight = FontWeights.SemiBold,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Margin = new Thickness(0, 2, 0, 1),
+            Visibility = Visibility.Collapsed
+        };
+        _recordTimerText.SetResourceReference(TextBlock.ForegroundProperty, "RecordActiveBrush");
+        _panel.Children.Add(_recordTimerText);
+        _panel.Children.Add(_dragArea);
 
         _shell = new Border
         {
@@ -130,6 +140,13 @@ public sealed class FloatingToolbarWindow : Window
         _timer.Tick += (_, _) =>
         {
             FollowScrcpyWindow();
+            if (_recorder.IsRecording)
+            {
+                var elapsed = _recorder.Elapsed;
+                _recordTimerText.Text = elapsed.TotalHours >= 1
+                    ? elapsed.ToString(@"hh\:mm\:ss") : elapsed.ToString(@"mm\:ss");
+                SetHint(_recordButton, $"结束录屏并保存（已录 {_recordTimerText.Text}）");
+            }
             if (_recorder.HasPendingRecording && !_recorder.IsRecording && !_autoFinalizeAttempted && _recordButton.IsEnabled)
             {
                 _autoFinalizeAttempted = true;
@@ -191,6 +208,8 @@ public sealed class FloatingToolbarWindow : Window
             UseLayoutRounding = true,
             SnapsToDevicePixels = true
         };
+        button.Width = 38;
+        button.Height = 38;
         SetHint(button, tooltip);
         button.Click += async (_, _) => await action();
         panel.Children.Add(button);
@@ -252,11 +271,10 @@ public sealed class FloatingToolbarWindow : Window
         foreach (UIElement child in _panel.Children)
             if (child is Button button && !ReferenceEquals(button, _collapseButton))
                 button.Visibility = _isCollapsed ? Visibility.Collapsed : Visibility.Visible;
-        _panel.Margin = new Thickness(_isCollapsed ? 4 : 7);
-        Width = _isCollapsed ? 36 : 60;
-        _collapseButton.Width = _isCollapsed ? 28 : 44;
-        _collapseButton.Height = _isCollapsed ? 28 : 26;
-        _collapseButton.Margin = new Thickness(0, 0, 0, _isCollapsed ? 0 : 5);
+        _recordTimerText.Visibility = _isCollapsed || !_recorder.IsRecording ? Visibility.Collapsed : Visibility.Visible;
+        _panel.Margin = new Thickness(4);
+        Width = 48;
+        _collapseButton.Margin = new Thickness(0, 0, 0, _isCollapsed ? 0 : 3);
         UpdateCollapseButton();
         _shell.BeginAnimation(OpacityProperty,
             new DoubleAnimation(0.65, 1, TimeSpan.FromMilliseconds(160)));
@@ -377,7 +395,7 @@ public sealed class FloatingToolbarWindow : Window
             if (_recorder.HasPendingRecording)
             {
                 SetHint(_recordButton, "正在保存录屏，请稍候…");
-                ShowNotice("正在封装并传输录屏，请稍候…");
+                ShowNotice("正在电脑上封装录屏，请稍候…");
                 var file = await _recorder.StopAsync();
                 SetRecordingState(false);
                 if (!string.IsNullOrWhiteSpace(file))
@@ -385,7 +403,7 @@ public sealed class FloatingToolbarWindow : Window
                 return;
             }
 
-            await _recorder.StartAsync(_device.DisplayName);
+            await _recorder.StartAsync(_device.DisplayName, GetScrcpyHandle());
             _autoFinalizeAttempted = false;
             SetRecordingState(true);
         }
@@ -406,6 +424,8 @@ public sealed class FloatingToolbarWindow : Window
             ? CreateIcon(new RectangleGeometry(new Rect(3.75, 3.75, 16.5, 16.5), 3.9, 3.9), true, "RecordActiveBrush")
             : CreateIcon(new EllipseGeometry(new Point(12, 12), 8.55, 8.55), true);
         SetHint(_recordButton, recording ? "结束录屏并保存" : "开始录屏");
+        _recordTimerText.Visibility = recording && !_isCollapsed ? Visibility.Visible : Visibility.Collapsed;
+        if (!recording) _recordTimerText.Text = "00:00";
         UpdateCollapseButton();
     }
 
@@ -650,7 +670,7 @@ public sealed class FloatingToolbarWindow : Window
         {
             _closing = false;
             _recordingCloseTask = null;
-            GlassDialog.Message(this, "录屏失败", $"录屏尚未安全保存，快捷栏会保留供重试：\n{ex.Message}", true);
+            GlassDialog.Message(this, "录屏失败", $"录屏未能保存，请检查照片文件夹中的临时文件：\n{ex.Message}", true);
         }
     }
 

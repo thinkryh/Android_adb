@@ -11,7 +11,7 @@
 | 静态链接到上述 FFmpeg DLL 的 dav1d | [dav1d 1.5.3](https://github.com/videolan/dav1d/tree/1.5.3) | [BSD-2-Clause](third_party_licenses/dav1d-BSD-2-Clause.txt)；另附 [Alliance for Open Media Patent License 1.0](third_party_licenses/dav1d-AOM-Patent-License.txt) |
 | 静态链接到上述 FFmpeg DLL 的 zlib | [zlib](https://zlib.net/)；确切构建版本未查明 | [zlib 许可文本](third_party_licenses/zlib-license.txt)；FFmpeg 构建脚本明确使用静态链接避免 zlib DLL 依赖 |
 | `scrcpy/libusb-1.0.dll` | [libusb 1.0.30](https://github.com/libusb/libusb/releases/tag/v1.0.30) | [LGPL-2.1-or-later](third_party_licenses/libusb-LGPL-2.1.txt) |
-| 构建输出中的 `QRCoder.dll` | [QRCoder 1.6.0](https://www.nuget.org/packages/QRCoder/1.6.0) | [MIT](third_party_licenses/QRCoder-MIT.txt)；本地 NuGet 包声明为 MIT |
+| `ScreenRecorderLib.dll` | [ScreenRecorderLib 7.0.1](https://github.com/sskodje/ScreenRecorderLib) | [MIT 许可原文](third_party_licenses/ScreenRecorderLib-MIT.txt)；用于电脑端按投屏窗口录制 MP4 |
 
 来源核对：本地 `scrcpy/` 的 13 个文件分别与 scrcpy 官方 `scrcpy-win64-v4.1.zip` 中对应文件的 SHA-256 一致。官方压缩包 SHA-256 为 `5b12172b3264b2889f4583ee64752ce832e29bc8b1089dca81093459697165db`；未复制官方压缩包中的 `disconnected.png`、`scrcpy.png` 和 `open_a_terminal_here.bat`。另独立核对了三个 ADB 文件与 Google 官方 `platform-tools_r37.0.0-win.zip` 完全一致，官方包 SHA-256 为 `4fe305812db074cea32903a489d061eb4454cbc90a49e8fea677f4b7af764918`。
 

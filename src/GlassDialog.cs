@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -150,13 +151,17 @@ internal static class GlassDialog
         var grid = new Grid();
         grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(58) });
         grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        var header = new Grid { Margin = new Thickness(23, 0, 15, 0) };
+        var header = new Grid { Margin = new Thickness(23, 0, 15, 0), Background = Brushes.Transparent };
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        header.MouseLeftButtonDown += (_, e) =>
+        header.PreviewMouseLeftButtonDown += (_, e) =>
         {
-            if (e.ChangedButton == MouseButton.Left && Window.GetWindow(root) is { } window)
-                window.DragMove();
+            if (e.LeftButton != MouseButtonState.Pressed) return;
+            for (var element = e.OriginalSource as DependencyObject; element is not null; element = VisualTreeHelper.GetParent(element))
+                if (element is ButtonBase) return;
+            if (Window.GetWindow(root) is not { } window) return;
+            try { window.DragMove(); }
+            catch (InvalidOperationException) { }
         };
         header.Children.Add(new TextBlock
         {

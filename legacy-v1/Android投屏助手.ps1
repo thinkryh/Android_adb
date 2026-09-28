@@ -6,8 +6,8 @@ $BundleRoot = Split-Path -Parent (Split-Path -Parent $HelperPath)
 $ScrcpyRoot = Join-Path $BundleRoot 'scrcpy'
 $ScrcpyExe = Join-Path $ScrcpyRoot 'scrcpy.exe'
 $AdbPath = Join-Path $ScrcpyRoot 'adb.exe'
-$LastWifiPath = Join-Path $BundleRoot '程序组件\上次无线地址.txt'
-$AndroidConfig = Join-Path $BundleRoot '程序组件\.android'
+$LastWifiPath = Join-Path $BundleRoot 'legacy-v1\上次无线地址.txt'
+$AndroidConfig = Join-Path $BundleRoot 'legacy-v1\.android'
 New-Item -ItemType Directory -Path $AndroidConfig -Force | Out-Null
 $env:ANDROID_USER_HOME = $AndroidConfig
 $env:HOME = $BundleRoot
