@@ -210,6 +210,7 @@
                 <Border Grid.ColumnSpan="2" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" VerticalAlignment="Top" />
                 <TextBlock Grid.Column="0" Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" Margin="0,0,12,0" FontSize="12" />
                 <Button x:Name="ThemeButton" Grid.Column="1" Click="Theme_Click" Width="65" Height="32" Padding="0" Margin="0"
+                        Style="{StaticResource BareIconButtonStyle}"
                         Background="Transparent" BorderThickness="0" AutomationProperties.Name="切换颜色模式" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                         <Path x:Name="ThemeMoonIcon" Width="10" Height="10" Stretch="Uniform"
@@ -217,8 +218,11 @@
                               Stroke="{DynamicResource MutedTextBrush}" StrokeThickness="1.7"
                               StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
                               VerticalAlignment="Center" Margin="0,0,5,0" />
-                        <TextBlock x:Name="ThemeSunIcon" Text="☼" FontFamily="Segoe UI Symbol" FontSize="17"
-                                   Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" Margin="0,0,5,0" Visibility="Collapsed" />
+                        <Path x:Name="ThemeSunIcon" Width="10" Height="10" Stretch="Uniform"
+                              Data="M 16,12 A 4,4 0 1 1 8,12 A 4,4 0 1 1 16,12 M 12,1 L 12,4 M 12,20 L 12,23 M 1,12 L 4,12 M 20,12 L 23,12 M 4.2,4.2 L 6.3,6.3 M 17.7,17.7 L 19.8,19.8 M 19.8,4.2 L 17.7,6.3 M 6.3,17.7 L 4.2,19.8"
+                              Stroke="{DynamicResource MutedTextBrush}" StrokeThickness="1.25"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                              VerticalAlignment="Center" Margin="0,0,5,0" Visibility="Collapsed" />
                         <TextBlock x:Name="ThemeLabel" Text="深色" FontSize="12" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>

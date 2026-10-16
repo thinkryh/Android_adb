@@ -24,7 +24,7 @@ dotnet restore .\src\Android投屏助手.csproj
 dotnet publish .\src\Android投屏助手.csproj -c Release -p:Platform=x64 --self-contained false -o .\发布版
 ```
 
-当前 Windows x64 预览版为 `v2.0.0-preview.4`，发布范围、验证情况及已知限制见[版本说明](docs/发布说明-v2.0.0-preview.4.md)。
+当前 Windows x64 预览版为 `v2.0.0-preview.5`，发布范围、验证情况及已知限制见[版本说明](docs/发布说明-v2.0.0-preview.5.md)。
 
 构建时项目会把上级 `scrcpy/`、项目许可证和第三方声明复制进 `发布版/`。根目录 BAT 使用统一启动流程，优先启动 `发布版/`，其次使用 Release 构建输出；没有图形程序时退回 v1。
 
@@ -41,4 +41,4 @@ Android投屏助手_v1/
 └─ Android投屏助手使用说明.txt  简明使用说明
 ```
 
-项目自行编写的源码和文档按 [MIT 许可证](LICENSE)授权，版权署名为 thinkryh。`scrcpy`、ADB、FFmpeg、SDL、libusb 和 ScreenRecorderLib 保留各自许可；来源、已核对内容与再分发前待办见[第三方组件声明](THIRD_PARTY_NOTICES.md)。本项目的玻璃外观是 WPF 样式实现，不等同于 iOS 的系统级 Liquid Glass 材质。
+项目仅支持 Android 设备。自行编写的源码和文档按 [MIT 许可证](LICENSE)授权，版权署名为 thinkryh。`scrcpy`、ADB、FFmpeg、SDL、libusb 和 ScreenRecorderLib 保留各自许可；来源、已核对内容与再分发前待办见[第三方组件声明](THIRD_PARTY_NOTICES.md)。本项目的玻璃外观通过 WPF 样式实现。

@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>Android投屏助手</AssemblyName>
-    <Version>2.0.0-preview.4</Version>
+    <Version>2.0.0-preview.5</Version>
     <RootNamespace>Android投屏助手</RootNamespace>
     <PlatformTarget>x64</PlatformTarget>
     <ApplicationManifest>app.manifest</ApplicationManifest>
